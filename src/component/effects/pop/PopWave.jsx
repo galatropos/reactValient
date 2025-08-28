@@ -1,0 +1,48 @@
+import React, { useEffect, useState } from 'react'
+import Card from '../../Card'
+
+const PopWave = ({portrait, landscape, style , elements=[], intervalChange=2000 ,rotateWave=10 ,timeWave=1000,scale=1.2}) => {
+const [index, setIndex] = useState(0)
+const [element, setElement] = useState(elements[0])
+
+    const animate=[
+        [{  rotate:rotateWave}, timeWave] ,
+        [{    rotate:-rotateWave}, timeWave] ,
+        [{  rotate:rotateWave}, timeWave] ,
+        [{    rotate:-rotateWave}, timeWave] ,
+      ]
+
+    portrait.animate=animate
+    landscape.animate=animate
+
+    useEffect(() => {
+        // Creamos el intervalo
+        const id = setInterval(() => {
+      setIndex((c) => (c + 1) % elements.length);
+        }, intervalChange);
+    
+        // Limpieza: cuando el componente se desmonta, eliminamos el intervalo
+        return () => clearInterval(id);
+      }, []); // [] asegura que solo se cree una vez
+      useEffect(() => {
+        // Cuando el index cambia, actualizamos la rotación
+    setTimeout(() => {
+        portrait.scale=scale
+        setTimeout(() => {
+            setElement(elements[index])
+            portrait.scale=1
+        }, 200)
+    }, 100)
+
+      }, [index]);
+  return (
+    <Card portrait={portrait} landscape={landscape} style={style}
+    loop={true}
+    controlsAnimate='play'
+    >
+        {element}
+    </Card>
+  )
+}
+
+export default PopWave

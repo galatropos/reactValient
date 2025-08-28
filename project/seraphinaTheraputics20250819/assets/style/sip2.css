@@ -1,0 +1,21 @@
+
+
+    body {
+        background:    linear-gradient(
+            to right,
+            #948C85 10%,
+            #9D9994 14% 50%,
+            #6B6356 69%
+          ) top / 100% 50% no-repeat,
+          
+          /* Mitad inferior con un solo color */
+          linear-gradient(
+            to bottom,
+            #686053,
+            #686053
+          ) bottom / 100% 50% no-repeat;
+      ;
+
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }

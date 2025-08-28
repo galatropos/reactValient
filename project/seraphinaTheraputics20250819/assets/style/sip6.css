@@ -1,0 +1,29 @@
+
+body {
+    background: linear-gradient(
+        to bottom,
+        #7A947D 0%,     /* color de arriba */
+        #7A947D 63%,    /* hasta la mitad */
+        #D0DEBB 63%,    /* corte en medio */
+        #D0DEBB 100%    /* color de abajo */
+      );
+}
+
+
+.circle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 35px;
+  padding: 0;
+  margin: 0;
+  width: 20px;
+  height: 20px;
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.circle-3::before {
+  top: 27px;
+}
