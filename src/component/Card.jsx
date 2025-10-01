@@ -1,5 +1,11 @@
 // src/component/Card.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useScale } from "../context/contextScale";
 import getPositionWithAnchor from "../utils/getPositionsWithAnchor";
 import { useElement } from "../context/ContextElement";
@@ -13,42 +19,45 @@ const defaultPercent = {
   anchor: "left-top",
   fontSize: 10, // default
   rotate: 0,
-  opacity:1,
-  scale:1,
-  hidden:false
+  opacity: 1,
+  scale: 1,
+  hidden: false,
 };
 
-export default function Card({
-  portrait = defaultPercent,
-  landscape = defaultPercent,
-  controlsAnimate = "stop",
-  repeat ,
-  onClick,
-  style,
-  children,
-  id,
-  loop,
-  setSecuenceFinish,
-  className
+const Card = forwardRef(function Card(
+  {
+    portrait = defaultPercent,
+    landscape = defaultPercent,
+    controlsAnimate = "stop",
+    repeat,
+    onClick,
+    style,
+    children,
+    id,
+    loop,
+    setSecuenceFinish,
+    className,
+  },
+  ref
+) {
+  const { width: containerWidth, height: containerHeight } = useScale(); // ancho/alto del container
 
-}) {
-
-  const { width: containerWidth, height: containerHeight } = useScale();// para conseguir el ancho y alto del container
-
-  const [isPortrait, setIsPortrait] = useState(window.innerWidth <= window.innerHeight); // para saber si es portrait o landscape
-  const { sequenceValue } = useProgresses({ // hook de animacion
+  const [isPortrait, setIsPortrait] = useState(window.innerWidth <= window.innerHeight); // portrait/landscape
+  const { sequenceValue } = useProgresses({
     default: isPortrait ? portrait : landscape,
     animate: isPortrait ? portrait.animate : landscape.animate,
     portrait,
     landscape,
-    action: controlsAnimate, // "play" | "pause" | "stop" control externo
+    action: controlsAnimate, // "play" | "pause" | "stop"
     repeat,
     loop,
-    onSequenceFinish:()=>setSecuenceFinish(true),
-
+    onSequenceFinish: () => setSecuenceFinish(true),
   });
 
-  const myDiv = useRef();
+  const myDiv = useRef(null);
+
+  // ✅ Exponer el nodo DOM raíz al padre
+  useImperativeHandle(ref, () => myDiv.current, []);
 
   const element = useElement();
   useEffect(() => {
@@ -76,7 +85,7 @@ export default function Card({
   const current2 = isPortrait ? portrait : landscape;
   const current = {
     ...current2,
-    ...sequenceValue
+    ...sequenceValue,
   };
 
   const widthPx = (current.width / 100) * containerWidth;
@@ -84,9 +93,7 @@ export default function Card({
 
   // Calcular fontSize escalado
   const fontSizePercent =
-    typeof current.fontSize === "number"
-      ? current.fontSize
-      : defaultPercent.fontSize;
+    typeof current.fontSize === "number" ? current.fontSize : defaultPercent.fontSize;
   const fontSizePx = (fontSizePercent / 100) * containerWidth;
 
   const { left, top } = getPositionWithAnchor(
@@ -111,10 +118,9 @@ export default function Card({
     justifyContent: "center",
     alignItems: "center",
     textAlign: "center",
-    transform: `rotate(${current.rotate||0}deg) scale(${current.scale||1})`,
+    transform: `rotate(${current.rotate || 0}deg) scale(${current.scale || 1})`,
     opacity: current.opacity,
-
-    transformOrigin: "0 50%", // clave para rotar desde inicio
+    transformOrigin: "0 50%", // rotar desde inicio
     ...style,
   };
 
@@ -127,9 +133,10 @@ export default function Card({
       portrait={portrait}
       landscape={landscape}
       className={className}
-
     >
       {children}
     </span>
   );
-}
+});
+
+export default Card;

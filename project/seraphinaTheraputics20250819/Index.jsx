@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 import { useEffect } from "react";
-import Sip from "./Sip6";
+import Sip from "./Sip8";
 import './assets/style/style.css';
 /*
  seraphinatheraputics_codan_sip_20250819_01_charlotte

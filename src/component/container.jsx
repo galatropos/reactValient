@@ -12,8 +12,11 @@ export default function ScaledContainer({ children }) {
   });
 
   const scaleContainer = () => {
-    const baseWidth = window.innerWidth <= window.innerHeight ? 900 : 1600;
-    const baseHeight = window.innerWidth <= window.innerHeight ? 1600 : 900;
+const min=900;
+const max=1600;
+
+    const baseWidth = window.innerWidth <= window.innerHeight ? min : max;
+    const baseHeight = window.innerWidth <= window.innerHeight ? max : min;
 
     const scaleX = window.innerWidth / baseWidth;
     const scaleY = window.innerHeight / baseHeight;

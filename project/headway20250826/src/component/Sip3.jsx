@@ -8,29 +8,11 @@ import "../../assets/style/sip3.css";
 
 const Sip3 = () => {
   const animate = [
-    [{ scale: -0.5 }, 3000],
-    [{ scale: 0.5 }, 3000],
+    [{ scale: -0.3 }, 3000],
+    [{ scale: 0.3 }, 3000],
   ];
   const scale = 1.5;
-  const videoStyle = {
-    style: {},
-    portrait: {
-      height: 100,
-      width: 100,
-      fontSize: 6,
-      anchor: "bottom",
-      x: 50,
-      y: 99,
-    },
-    landscape: {
-      height: 100,
-      width: 100,
-      fontSize: 6,
-      anchor: "middle",
-      x: 50,
-      y: 50,
-    },
-  };
+
   const header = {
     style: {
       color: "#0066FD",
@@ -40,8 +22,8 @@ const Sip3 = () => {
     },
     portrait: {
       height: 10,
-      width: 50,
-      fontSize: 4,
+      width: 60,
+      fontSize: 5,
       anchor: "middle",
       scale,
       rotate: 0,
@@ -52,25 +34,25 @@ const Sip3 = () => {
     landscape: {
       height: 10,
       width: 50,
-      fontSize: 4,
+      fontSize: 2.5,
       anchor: "middle",
       scale,
       rotate: 0,
       x: 50,
-      y: 50,
+      y: 40,
       animate,
     },
   };
   const logo = {
     style: {
       backgroundImage: `url(https://headway-product.com/images/logo.svg)`,
-      backgroundSize: "cover",
+      backgroundSize: "contain",
       backgroundRepeat: "no-repeat",
       transformOrigin: "bottom center",
       backgroundPosition: "center",
     },
     portrait: {
-      height: 3,
+      height: 5,
       width: 30,
       fontSize: 6,
       anchor: "bottom",
@@ -81,12 +63,12 @@ const Sip3 = () => {
       animate,
     },
     landscape: {
-      height: 7,
+      height: 10,
       width: 20,
       fontSize: 6,
       anchor: "bottom",
       x: 50,
-      y: 43,
+      y: 32,
       scale,
       rotate: 0,
       animate,
@@ -118,6 +100,7 @@ const Sip3 = () => {
       fontSize: 1.4,
       anchor: "top",
       x: 50,
+      hidden: true,
       y: 58,
       scale,
       rotate: 0,
@@ -131,19 +114,20 @@ const Sip3 = () => {
     },
     portrait: {
       height: 18,
-      width: 54,
+      width: 68,
       fontSize: 6,
       anchor: "middle",
       x: 50,
-      y: 51,
+      y: 50,
     },
     landscape: {
-      height: 13,
-      width: 29,
+      hidden: true,
+      height: 20,
+      width: 42,
       fontSize: 6,
       anchor: "middle",
       x: 50,
-      y: 53,
+      y: 55,
     },
   };
 
@@ -162,12 +146,34 @@ const Sip3 = () => {
       hidden: true,
     },
     landscape: {
-      height: 10,
-      width: 20,
+      height: 12,
+      width: 24,
       fontSize: 6,
       anchor: "middle",
       x: 50,
-      y: 41,
+      y: 40,
+    },
+  };
+
+  const videoStyle = {
+    style: {
+      
+    },
+    portrait: {
+      height: 120,
+      width: 140,
+      fontSize: 6,
+      anchor: "middle",
+      x: 50,
+      y: 49.5,
+    },
+    landscape: {
+      height: 100,
+      width: 140,
+      fontSize: 6,
+      anchor: "middle",
+      x: 50,
+      y: 50,
     },
   };
   return (
@@ -178,6 +184,7 @@ const Sip3 = () => {
         {...videoStyle}
         fps={24} // Ajusta el muestreo
         loop={true} // true si quieres que repita
+
       />
       <Card {...white} />
       <Card {...white2} />

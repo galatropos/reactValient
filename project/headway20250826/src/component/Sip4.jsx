@@ -8,22 +8,23 @@ import "../../assets/style/sip4.css";
 
 const Sip4 = () => {
 
+
   const animate = [
-    [{ scale: 0.5 }, 300],
-    [{ scale: -0.5 }, 300],
-    [{ scale: 0 }, 1000],
+    [{ scale: 0 }, 3000],
+    [{ scale: 0.2 }, 300],
+    [{ scale: -0.2 }, 300],
   ];
   const videoStyle={
     style:{
-      
+      border: "3px solid black",
     },
     portrait: {
-        height: 103,
-        width: 100,
+        height: 150,
+        width: 150,
         fontSize: 6,
-        anchor: "bottom",
+        anchor: "middle",
         x: 50,
-        y:101,
+        y:50,
       },
       landscape: {
         height: 97,
@@ -47,7 +48,7 @@ const Sip4 = () => {
         fontSize: 8,
         anchor: "left-top",
         x: 0,
-        y: 4.8,
+        y: 5.3,
         scale:1,
         animate,
       },
@@ -65,97 +66,32 @@ const Sip4 = () => {
     const logo={
       style:{
           backgroundImage: `url(https://headway-product.com/images/logo.svg)`,
-          backgroundSize: "cover",
+          backgroundSize: "contain",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
       },
       portrait: {
-          height: 3,
+          height: 4,
           width: 30,
-          fontSize: 6,
+          fontSize: 7,
           anchor: "top",
           x: 50,
           y: 2,
         },
         landscape: {
-          height: 7,
-          width: 21,
+          height: 13,
+          width: 23,
           fontSize: 6,
           anchor: "left-top",
           x: 70,
           y: 20,
         },
       }
-      const white={
-        style:{
-            backgroundColor: "#EFEFEF",
-        
-          },
-        portrait: {
-            height: 10,
-            width: 100,
-            fontSize: 6,
-            anchor: "left-top",
-            x: 0,
-            y: -10,
-          },
-          landscape: {
-            height: 20,
-            width: 100,
-            fontSize: 6,
-            anchor: "left-top",
-            x: 0,
-            y: -3,
-          },
-        }
-        const white2={
-          style:{
-              backgroundColor: "#EFEFEF",
-            },
-          portrait: {
-              height: 10,
-              width: 100,
-              fontSize: 6,
-              anchor: "left-top",
-              x: 0,
-              y: 0,
-            },
-            landscape: {
-              height: 120,
-              width: 20,
-              fontSize: 6,
-              anchor: "top",
-              x: 80,
-              y: 0,
-            },
-          }
-          const white3={
-            style:{
-                backgroundColor: "#EFEFEF",
-                
-              },
-            portrait: {
-                height: 10,
-                width: 100,
-                fontSize: 6,
-                anchor: "left-top",
-                x: 0,
-                y: 0,
-              },
-              landscape: {
-                height: 120,
-                width: 20,
-                fontSize: 6,
-                anchor: "top",
-                x: -10,
-                y: 0,
-              },
-            }
         const button={
           style:{
               backgroundColor: "#2A65F5",
               color: "white",
-              fontWeight: "bold",
+              fontWeight: "500",
               borderRadius: "20px",
           },
           portrait: {
@@ -170,9 +106,9 @@ const Sip4 = () => {
 
             },
             landscape: {
-              height: 10,
+              height: 9,
               width: 20,
-              fontSize: 3,
+              fontSize: 2.5,
               anchor: "top",
               x: 80,
               y: 80,
@@ -217,6 +153,108 @@ const Sip4 = () => {
                   [{scale:-0.2},450]
               ]}
           }
+
+
+  const whiteT = {
+    style: {
+      backgroundColor: "#EFEFEF",
+    },
+    portrait: {
+      height: 30,
+      width: 1000,
+      anchor: "bottom",
+      x: -2,
+      y: 12,
+    },
+    landscape: {
+      height: 100,
+      width: 1000,
+      fontSize: 6,
+      anchor: "bottom",
+      x: -2,
+      y: -2,
+    },
+  };
+
+  const whiteB = {
+    style: {
+      backgroundColor: "#EFEFEF",
+    },
+    portrait: {
+      height: 5,
+      width: 10000,
+      anchor: "bottom",
+      x: -2,
+      y: 103,
+    },
+    landscape: {
+      height: 10,
+      width: 1000,
+      fontSize: 6,
+      anchor: "bottom",
+      x: -2,
+      y: 120,
+    },
+  };
+  const whiteR = {
+    style: {
+      backgroundColor: "#EFEFEF",
+    },
+    portrait: {
+      height: 1000,
+      width: 5,
+      anchor: "left",
+      x: -19,
+      y: -2,
+    },
+    landscape: {
+      height: 1000,
+      width: 500,
+      anchor: "right",
+      x: 2,
+      y: -2,
+    },
+  };
+  const whiteL = {
+    style: {
+      backgroundColor: "#EFEFEF",
+    },
+    portrait: {
+      height: 1000,
+      width: 50,
+      anchor: "left",
+      x: 112,
+      y: -2,
+    },
+    landscape: {
+      height: 1000,
+      width: 500,
+      anchor: "left",
+      x: 80,
+      y: -2,
+    },
+  };
+
+  const white = {
+    style: {
+      backgroundColor: "#EFEFEF",
+    },
+    portrait: {
+      height: 1000,
+      width: 5,
+      anchor: "left",
+      x: 99.5,
+      y: -2,
+      hidden: true,
+    },
+    landscape: {
+      height: 10,
+      width: 300,
+      anchor: "left",
+      x: 15,
+      y: 10,
+    },
+  };
     return (<>
     
     <VideoToFramesPlayer
@@ -226,12 +264,19 @@ const Sip4 = () => {
     {...videoStyle}
     fps={24}                   // Ajusta el muestreo
     loop={true}               // true si quieres que repita
+   
+  repeat={[
+    [2000, 1000, 4]
+  ]} // opcional
     />
-    <Card {...white}  />
-    <Card {...white2}  />
-    <Card {...white3}  />
+    
+      <Card {...whiteT} />
+      <Card {...whiteB} />
+      <Card {...whiteL} />
+      <Card {...whiteR} />
+      <Card {...white} />
 
-    <Card {...header}> Back to School Special</Card> 
+    <Card {...header}> Hola mundo</Card> 
     <Card {...tap} loop={true} controlsAnimate='play'> Tap to read</Card> 
     <Card {...logo}   /> 
     <Card {...button} loop={true} controlsAnimate='play' >Try Now</Card>

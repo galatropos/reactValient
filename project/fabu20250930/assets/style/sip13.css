@@ -1,0 +1,52 @@
+/* Importar todos los pesos y estilos de Lato */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+body{ font-family: "Inter" !important; background-color: red !important;  }
+
+.fenix-btn {
+    position: relative;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+  
+    /* degradado con colores de tu imagen */
+    background: linear-gradient(45deg, #2c0d06, #6a1b0c, #b13a15, #e85a1c, #2c0d06);
+    background-size: 400% 400%;
+    animation: flames 6s ease infinite, pulse 2s infinite;
+    overflow: hidden;
+  }
+  
+  /* 🔥 animación de movimiento de fuego */
+  @keyframes flames {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  /* ✨ efecto de respiración */
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 15px #b13a15; }
+    50% { transform: scale(1.05); box-shadow: 0 0 30px #e85a1c; }
+  }
+  
+  /* 🌟 destello */
+  .fenix-btn::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -75%;
+    width: 50%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.5), transparent);
+    transform: skewX(-25deg);
+    animation: shine 3s infinite;
+  }
+  
+  @keyframes shine {
+    0% { left: -75%; }
+    50% { left: 125%; }
+    100% { left: 125%; }
+  }
+  

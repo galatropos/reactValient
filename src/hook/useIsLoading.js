@@ -4,7 +4,10 @@ function useIsLoading() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleLoad = () => setLoading(false);
+    const handleLoad = () =>
+    {
+        setLoading(false);
+    }
 
     if (document.readyState === "complete") {
       setLoading(false);

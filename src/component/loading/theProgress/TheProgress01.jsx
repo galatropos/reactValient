@@ -1,7 +1,7 @@
 import React from 'react'
 import useIsLoading from '../../../hook/useIsLoading';
 
-const TheProgress01 = ({children,loading=false,  srcImage, fillColor = "#514b82", backgroundColor = "white" }) => {
+const TheProgress01 = ({children,loading=false,  srcImage, fillColor = "#514b82", backgroundColor = "white" ,width, height}) => {
   
     const isLoading = useIsLoading();
   if (!isLoading && !loading) return children;
@@ -46,7 +46,7 @@ const TheProgress01 = ({children,loading=false,  srcImage, fillColor = "#514b82"
     </style>
     <div className='content'>
     {
-        <img src={srcImage} alt="loading" />
+        <img src={srcImage} alt="loading" height={height} width={width} fetchpriority="high" rel='preload'/>
     }
     <div className="loader"></div>
     </div>

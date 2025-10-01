@@ -1,0 +1,49 @@
+/* Importar todos los pesos y estilos de Lato */
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+
+:root { font-family: "Lato" !important; background-color: white !important;  }
+.flash-button {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  
+    color: white;
+    border-radius: 20px;
+    width: 220px;
+    height: 120px;
+    font-size: 32px;
+    position: relative;
+    overflow: hidden; /* evita que el brillo se salga */
+  }
+  
+  .flash-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%; /* un poco más ancho para que se difumine */
+    height: 100%;
+    opacity: 0.5;
+    background: linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0) 0%,      /* inicio transparente */
+      rgba(255, 255, 255, 0.1) 20%,   /* borde suave */
+      rgba(255, 255, 255, 0.6) 50%,   /* centro fuerte */
+      rgba(255, 255, 255, 0.1) 80%,   /* borde suave */
+      rgba(255, 255, 255, 0) 100%     /* final transparente */
+    );
+    animation: flash 2.5s infinite;
+  }
+  
+  @keyframes flash {
+    0% {
+      left: -100%;
+    }
+    30% {
+      left: 100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
