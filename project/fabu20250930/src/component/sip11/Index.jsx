@@ -1,13 +1,12 @@
 import React from "react";
 import "../../../assets/style/sip11.css";
-import portrait from "../../../assets/image/sip11/background.webp";
+import portrait from "../../../assets/image/sip11/background.png";
 import Card from "../../../../../src/component/Card";
 import CTA from "./CTA";
 import { useOrientation } from "../../../../../src/hook/useOrientation";
 
 const Index = () => {
   const orientation = useOrientation();
-
 
   const stylesImg = {
     backgroundSize: "cover",
@@ -26,16 +25,16 @@ const Index = () => {
 
     portrait: {
       x: 50,
-      y: 50,
-      width: 280,
-      height: 280,
+      y: 45,
+      width: 240,
+      height: 240,
       anchor: "middle",
     },
     landscape: {
-      x: 45,
-      y: 55,
-      width:150,
-      height: 150,
+      x: 35,
+      y: 64,
+      width: 220,
+      height: 220,
       anchor: "middle",
     },
   };
@@ -43,7 +42,6 @@ const Index = () => {
     <>
       {<CTA />}
       <Card {...contentStyle} />
-
     </>
   );
 };

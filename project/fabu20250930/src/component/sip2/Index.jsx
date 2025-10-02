@@ -55,7 +55,7 @@ const Index = () => {
     style: { ...stylesImg, backgroundImage: `url(${landscape})` },
     landscape: {
       x: 50,
-      y: 30,
+      y: 40,
       width: 90,
       height: 55,
       anchor: "middle",
@@ -66,10 +66,7 @@ const Index = () => {
   };
   return (
     <>
-    {
-
-      <CTA />
-    }
+      {<CTA />}
 
       <Card {...backgroundStyle} />
       <Card {...portraitStyle} />

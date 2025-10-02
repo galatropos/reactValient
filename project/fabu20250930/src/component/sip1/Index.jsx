@@ -1,32 +1,34 @@
 import React from "react";
 import "../../../assets/style/sip1.css";
 import portrait from "../../../assets/image/sip1/portrait.webp";
-import landscape from "../../../assets/image/sip1/landscape.webp";
 import background from "../../../assets/image/sip1/background.webp";
+import landscape from "../../../assets/image/sip1/landscape.webp";
 import Card from "../../../../../src/component/Card";
 import CTA from "./CTA";
+import { useOrientation } from "../../../../../src/hook/useOrientation";
 
 const Index = () => {
+  const orientation = useOrientation();
   const backgroundStyle = {
     style: {
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
-      zIndex: -11,
       backgroundImage: `url(${background})`,
+      transformOrigin: "center center",
     },
     landscape: {
-      x: 50,
-      y: 57,
-      width: 200,
-      height: 200,
+      x: 80,
+      y: 54,
+      width: 57,
+      height: 120,
       anchor: "middle",
     },
     portrait: {
       x: 50,
       y: 50,
-      width: 200,
-      height: 200,
+      width: 170,
+      height: 170,
       anchor: "middle",
     },
   };
@@ -35,13 +37,16 @@ const Index = () => {
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
-    zIndex: -11,
   };
-  const portraitStyle = {
-    style: { ...stylesImg, backgroundImage: `url(${portrait})` },
-    landscape: {
-      hidden: true,
+
+  const contentStyle = {
+    style: {
+      ...stylesImg,
+      backgroundImage: `url(${
+        orientation === "landscape" ? landscape : portrait
+      })`,
     },
+
     portrait: {
       x: 50,
       y: 50,
@@ -49,31 +54,19 @@ const Index = () => {
       height: 102,
       anchor: "middle",
     },
-  };
-
-  const landscapeStyle = {
-    style: { ...stylesImg, backgroundImage: `url(${landscape})` },
     landscape: {
       x: 50,
-      y: 70,
-      width: 88,
-      height: 140,
+      y: 77,
+      width: 100,
+      height: 160,
       anchor: "middle",
-    },
-    portrait: {
-      hidden: true,
     },
   };
   return (
     <>
-    {
-
-      <CTA />
-    }
-
       <Card {...backgroundStyle} />
-      <Card {...portraitStyle} />
-      <Card {...landscapeStyle} />
+      <Card {...contentStyle} />
+      {<CTA />}
     </>
   );
 };

@@ -8,7 +8,6 @@ import { useOrientation } from "../../../../../src/hook/useOrientation";
 const Index = () => {
   const orientation = useOrientation();
 
-
   const stylesImg = {
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -26,15 +25,15 @@ const Index = () => {
 
     portrait: {
       x: 50,
-      y: 50,
-      width: 102,
-      height: 102,
+      y: 47,
+      width: 108,
+      height: 108,
       anchor: "middle",
     },
     landscape: {
       x: 35,
       y: 54,
-      width:45,
+      width: 45,
       height: 110,
       anchor: "middle",
     },
@@ -43,7 +42,6 @@ const Index = () => {
     <>
       {<CTA />}
       <Card {...contentStyle} />
-
     </>
   );
 };

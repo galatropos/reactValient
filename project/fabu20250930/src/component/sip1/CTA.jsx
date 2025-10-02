@@ -4,19 +4,19 @@ import ctaImg from "../../../assets/image/sip1/cta.webp";
 import { animate } from "../animate";
 
 const CTA = () => {
-
-
   const cta = {
     style: {
-      backgroundSize: "cover",
+      backgroundSize: "contain",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       backgroundImage: `url(${ctaImg})`,
+      transformOrigin: "center center",
+      borderRadius: "60px",
+      origin: "center center",
     },
     portrait: {
-      fontSize: 4.5,
-      height: 8,
-      width: 56,
+      height: 7,
+      width: 40,
       anchor: "middle",
       x: 50,
       y: 90,
@@ -27,14 +27,14 @@ const CTA = () => {
     },
     landscape: {
       fontSize: 3,
-      height: 14,
-      width: 35,
+      height: 11,
+      width: 22,
       anchor: "middle",
       scale: 1,
       opacity: 1,
       animate,
       x: 50,
-      y: 88,
+      y: 92,
     },
     controlsAnimate: "play",
     loop: true,
@@ -42,7 +42,7 @@ const CTA = () => {
 
   return (
     <>
-      <Card {...cta}></Card>
+      <Card {...cta} />
     </>
   );
 };

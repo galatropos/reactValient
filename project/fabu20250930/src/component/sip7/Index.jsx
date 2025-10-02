@@ -69,7 +69,6 @@ const Index = () => {
       {<CTA />}
       <Card {...backgroundStyle} />
       <Card {...contentStyle} />
-
     </>
   );
 };

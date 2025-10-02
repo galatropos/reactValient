@@ -8,7 +8,7 @@ import { useOrientation } from "../../../../../src/hook/useOrientation";
 
 const Index = () => {
   const orientation = useOrientation();
- 
+
   const stylesImg = {
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -26,7 +26,7 @@ const Index = () => {
 
     portrait: {
       x: 50,
-      y: 50,
+      y: 45,
       width: 102,
       height: 102,
       anchor: "middle",

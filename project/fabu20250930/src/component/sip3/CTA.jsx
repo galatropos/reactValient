@@ -5,7 +5,7 @@ import handImg from "../../../assets/image/sip3/hand.webp";
 import { animate } from "../animate";
 
 const CTA = () => {
-   const animateHand = [
+  const animateHand = [
     [{ y: 2 }, 500],
     [{ x: 0 }, 150],
     [{ y: -2 }, 500],
@@ -17,8 +17,7 @@ const CTA = () => {
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       backgroundImage: `url(${ctaImg})`,
-      transformOrigin: "center center" 
-
+      transformOrigin: "center center",
     },
     portrait: {
       fontSize: 4.5,
@@ -41,12 +40,11 @@ const CTA = () => {
       opacity: 1,
       animate,
       x: 79,
-      y: 80,
+      y: 85,
     },
     controlsAnimate: "play",
     loop: true,
   };
-
 
   const hand = {
     style: {
@@ -54,8 +52,7 @@ const CTA = () => {
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       backgroundImage: `url(${handImg})`,
-      transformOrigin: "center center" 
-
+      transformOrigin: "center center",
     },
     portrait: {
       fontSize: 4.5,
@@ -67,7 +64,7 @@ const CTA = () => {
       scale: 1,
       rotate: 0,
       opacity: 1,
-      animate:animateHand,
+      animate: animateHand,
     },
     landscape: {
       fontSize: 3,
@@ -76,9 +73,9 @@ const CTA = () => {
       anchor: "middle",
       scale: 1,
       opacity: 1,
-      animate:animateHand,
+      animate: animateHand,
       x: 79,
-      y: 68,
+      y: 76,
     },
     controlsAnimate: "play",
     loop: true,
