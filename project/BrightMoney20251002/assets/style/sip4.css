@@ -1,0 +1,48 @@
+body {
+  background-color: #FBFFE5;
+}
+
+.price-bg { position: relative; display: inline-block; }
+
+/* Brillo dorado (solo una pasada por ciclo) */
+.price-bg::after{
+  content:"";
+  position:absolute; inset:0; pointer-events:none;
+
+  /* Franja dorada (núcleo brillante + bordes ámbar) */
+  background: linear-gradient(-75deg,
+    rgba(255,255,255,0)         32%,
+    rgba(255,223,128,0.85)      44%,  /* soft gold glow */
+    rgba(255,215,0,0.95)        49%,  /* gold (≈ #FFD700) */
+    rgba(255,240,180,0.95)      52%,  /* highlight */
+    rgba(255,200,80,0.85)       56%,  /* warm edge */
+    rgba(255,255,255,0)         68%
+  );
+  background-size: 220% 100%;
+  background-position: -160% 0;
+
+  /* Un ciclo = 1 barrido + PAUSA (loop) */
+  animation: shine-gold-once 6s linear infinite;
+  /* velocidad constante; nada de transitions */
+  transition: none;
+
+  /* Recorte: solo el área blanca del %750 */
+  -webkit-mask-image: var(--img);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: var(--pos);
+  -webkit-mask-size: var(--size);
+          mask-image: var(--img);
+          mask-repeat: no-repeat;
+          mask-position: var(--pos);
+          mask-size: var(--size);
+
+  filter: blur(.25px);
+  backface-visibility: hidden;
+}
+
+@keyframes shine-gold-once {
+  0%   { background-position: -160% 0; opacity: 1; }
+  60%  { background-position:  160% 0; opacity: 1; } /* fin del barrido */
+  61%  { background-position:  160% 0; opacity: 0; } /* oculto */
+  100% { background-position:  160% 0; opacity: 0; } /* pausa hasta reiniciar */
+}

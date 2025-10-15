@@ -31,10 +31,11 @@ function useOrientationMode() {
 }
 
 /**
- * - Le pasas portraitSrc / landscapeSrc (videos)
- * - Pinta frames en <canvas> (videos ocultos como fuente)
+ * - portraitSrc / landscapeSrc (videos)
+ * - Dibuja frames en <canvas> (videos ocultos como fuente)
  * - repeat: [triggerMs, targetMs, count]
- * - pause : [triggerMs, durationMs]   (1 disparo por loop por regla)
+ * - pause : [triggerMs, durationMs, count] (count opcional; infinito si no se pasa)
+ * - velocity: factor de velocidad (1 = normal, 2 = 2x, 0.5 = 0.5x)
  */
 export default function VideoToFramesPlayer({
   portrait,
@@ -45,7 +46,7 @@ export default function VideoToFramesPlayer({
   pause = [],
   posterPortrait,
   posterLandscape,
-  objectFit = "cover",            // "cover" | "contain"
+  objectFit = "cover", // "cover" | "contain"
   autoPlay = true,
   loop = true,
   muted = true,
@@ -53,11 +54,16 @@ export default function VideoToFramesPlayer({
   className,
   style,
   noCard = false,
+  velocity = 1, // 👈 NUEVO: controla la velocidad
 }) {
   const mode = useOrientationMode();
   const showPortrait = mode === "portrait";
 
-  // videos ocultos (fuente)
+  // Normaliza/clamp de velocidad
+  const rateRef = useRef(1);
+  rateRef.current = Math.max(0.1, Number.isFinite(+velocity) ? +velocity : 1);
+
+  // videos fuente (ocultos)
   const vPortraitRef = useRef(null);
   const vLandscapeRef = useRef(null);
 
@@ -65,9 +71,9 @@ export default function VideoToFramesPlayer({
   const cPortraitRef = useRef(null);
   const cLandscapeRef = useRef(null);
 
-  const shownVideoRef  = showPortrait ? vPortraitRef  : vLandscapeRef;
+  const shownVideoRef = showPortrait ? vPortraitRef : vLandscapeRef;
   const hiddenVideoRef = showPortrait ? vLandscapeRef : vPortraitRef;
-  const shownCanvasRef = showPortrait ? cPortraitRef  : cLandscapeRef;
+  const shownCanvasRef = showPortrait ? cPortraitRef : cLandscapeRef;
 
   // contenedor para observar tamaño (re-draw inmediato)
   const containerRef = useRef(null);
@@ -76,7 +82,7 @@ export default function VideoToFramesPlayer({
   // repeat en ms
   // =======================
   const rulesInitialRef = useRef([]);
-  const rulesStateRef   = useRef([]);
+  const rulesStateRef = useRef([]);
   const resetRuleCounts = () => {
     rulesStateRef.current = rulesInitialRef.current.map((r) => ({ ...r }));
   };
@@ -84,7 +90,7 @@ export default function VideoToFramesPlayer({
     const rules = (Array.isArray(repeat) ? repeat : [])
       .map(([tr, tg, c]) => ({
         triggerMs: Math.max(0, Number(tr) || 0),
-        targetMs : Math.max(0, Number(tg) || 0),
+        targetMs: Math.max(0, Number(tg) || 0),
         remaining: Math.max(0, Number.isFinite(c) ? Math.floor(c) : 0),
       }))
       .sort((a, b) => a.triggerMs - b.triggerMs);
@@ -96,22 +102,24 @@ export default function VideoToFramesPlayer({
   // pause en ms
   // =======================
   const pausesInitialRef = useRef([]);
-  const pausesStateRef   = useRef([]);
+  const pausesStateRef = useRef([]);
   const resetPauseCounts = () => {
     pausesStateRef.current = pausesInitialRef.current.map((p) => ({
       ...p,
-      holdEndAt: 0,  // performance.now() cuando termina la pausa
-      holdAtMs : 0,  // tiempo de video congelado
+      holdEndAt: 0, // performance.now() cuando termina la pausa
+      holdAtMs: 0, // tiempo de video congelado
     }));
   };
   useEffect(() => {
     const pauses = (Array.isArray(pause) ? pause : [])
-     .map(([tr, dur, cnt]) => ({
-        triggerMs : Math.max(0, Number(tr)  || 0),
+      .map(([tr, dur, cnt]) => ({
+        triggerMs: Math.max(0, Number(tr) || 0),
         durationMs: Math.max(0, Number(dur) || 0),
-       remaining : Number.isFinite(cnt) ? Math.max(0, Math.floor(cnt)) : Number.POSITIVE_INFINITY,
-        holdEndAt : 0,
-        holdAtMs  : 0,
+        remaining: Number.isFinite(cnt)
+          ? Math.max(0, Math.floor(cnt))
+          : Number.POSITIVE_INFINITY,
+        holdEndAt: 0,
+        holdAtMs: 0,
       }))
       .sort((a, b) => a.triggerMs - b.triggerMs);
     pausesInitialRef.current = pauses;
@@ -153,7 +161,10 @@ export default function VideoToFramesPlayer({
     const ensureMeta = (vv) =>
       new Promise((res) => {
         if (vv.readyState >= 1) return res();
-        const on = () => { vv.removeEventListener("loadedmetadata", on); res(); };
+        const on = () => {
+          vv.removeEventListener("loadedmetadata", on);
+          res();
+        };
         vv.addEventListener("loadedmetadata", on, { once: true });
       });
 
@@ -163,6 +174,10 @@ export default function VideoToFramesPlayer({
         // -0.001s para evitar quedar en el último frame exacto
         vShow.currentTime = Math.min(desired, Math.max(0, (dur || 0) - 0.001));
       } catch {}
+      try {
+        // Asegura velocidad correcta al rotar
+        vShow.playbackRate = rateRef.current;
+      } catch {}
       if (autoPlay) {
         const p = vShow.play?.();
         p?.catch?.(() => {});
@@ -171,6 +186,21 @@ export default function VideoToFramesPlayer({
       prevMsRef.current = (desired || 0) * 1000;
     });
   }, [mode, autoPlay]);
+
+  // Aplicar playbackRate cuando cambie velocity (ambos videos)
+  useEffect(() => {
+    const r = rateRef.current;
+    if (vPortraitRef.current) {
+      try {
+        vPortraitRef.current.playbackRate = r;
+      } catch {}
+    }
+    if (vLandscapeRef.current) {
+      try {
+        vLandscapeRef.current.playbackRate = r;
+      } catch {}
+    }
+  }, [velocity]);
 
   // dibujar frame al canvas con objectFit + HiDPI + ResizeObserver
   const drawToCanvas = (video, canvas) => {
@@ -200,9 +230,7 @@ export default function VideoToFramesPlayer({
     const vh = video.videoHeight || 1;
 
     const scale =
-      objectFit === "contain"
-        ? Math.min(cw / vw, ch / vh)
-        : Math.max(cw / vw, ch / vh);
+      objectFit === "contain" ? Math.min(cw / vw, ch / vh) : Math.max(cw / vw, ch / vh);
 
     const dw = Math.max(1, Math.floor(vw * scale));
     const dh = Math.max(1, Math.floor(vh * scale));
@@ -245,11 +273,12 @@ export default function VideoToFramesPlayer({
     let stopped = false;
     const hasRVFC = typeof v.requestVideoFrameCallback === "function";
 
-    // intentar autoplay silencioso
+    // intentar autoplay silencioso y setear velocidad
     const tryPlay = async () => {
       try {
         v.muted = muted;
         v.playsInline = true;
+        v.playbackRate = rateRef.current; // 👈 aplica velocidad
         if (autoPlay) await v.play();
       } catch {
         // si no deja, avanzaremos manualmente el currentTime en el fallback
@@ -269,7 +298,7 @@ export default function VideoToFramesPlayer({
       const nearEnd = prev > durMs - 400; // últimas ~0.4s
       const wrapped = prev > tMs + 100 && nearStart && nearEnd;
       if (wrapped) {
-        resetRuleCounts();  // reinicia repeat
+        resetRuleCounts(); // reinicia repeat
         resetPauseCounts(); // reinicia pause
       }
     };
@@ -298,7 +327,7 @@ export default function VideoToFramesPlayer({
         if (p.remaining <= 0 || p.durationMs <= 0) continue;
         if (prev < p.triggerMs && tMs >= p.triggerMs) {
           p.holdAtMs = p.triggerMs;
-          p.holdEndAt = now + p.durationMs;
+          p.holdEndAt = now + p.durationMs; // duración en tiempo real (independiente de velocity)
           p.remaining -= 1;
           try {
             v.currentTime = p.triggerMs / 1000;
@@ -331,6 +360,10 @@ export default function VideoToFramesPlayer({
       // Camino con requestVideoFrameCallback
       const cb = () => {
         if (stopped) return;
+        // Mantener playbackRate si velocity cambia on-the-fly
+        try {
+          v.playbackRate = rateRef.current;
+        } catch {}
         handleProgressAndDraw();
         v.requestVideoFrameCallback(cb);
       };
@@ -347,6 +380,9 @@ export default function VideoToFramesPlayer({
 
       if (autoPlay && !v.paused && !v.ended) {
         // Reproduciendo normal
+        try {
+          v.playbackRate = rateRef.current;
+        } catch {}
         handleProgressAndDraw();
       } else {
         // Autoplay bloqueado: "seeking-driven"
@@ -356,7 +392,7 @@ export default function VideoToFramesPlayer({
 
         const dur = isFinite(v.duration) ? v.duration : 0;
         if (dur > 0) {
-          const inc = delta / 1000; // seg
+          const inc = (delta / 1000) * rateRef.current; // 👈 acelera/ralentiza
           let next = (v.currentTime || 0) + inc;
 
           // ---- PAUSE en RAF ----
@@ -372,7 +408,7 @@ export default function VideoToFramesPlayer({
               if (p.remaining <= 0 || p.durationMs <= 0) continue;
               if (prev < p.triggerMs && nextMs >= p.triggerMs) {
                 p.holdAtMs = p.triggerMs;
-                p.holdEndAt = now + p.durationMs;
+                p.holdEndAt = now + p.durationMs; // tiempo real
                 p.remaining -= 1;
                 next = p.triggerMs / 1000;
                 prevMsRef.current = p.triggerMs;
@@ -381,7 +417,7 @@ export default function VideoToFramesPlayer({
               }
             }
             if (!startedHold) {
-              // ---- REPEAT en RAF (solo si no inició hold) ----
+              // ---- REPEAT en RAF (solo si no inició hold)
               const prev2 = prevMsRef.current;
               let jumped = false;
               for (const r of rulesStateRef.current) {
@@ -424,7 +460,7 @@ export default function VideoToFramesPlayer({
       stopped = true;
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, [showPortrait, autoPlay, loop, muted, objectFit]);
+  }, [showPortrait, autoPlay, loop, muted, objectFit, velocity]);
 
   // redibujo extra al resize de ventana (por si el editor no usa ResizeObserver)
   useEffect(() => {
@@ -483,8 +519,15 @@ export default function VideoToFramesPlayer({
 
   // En modo Card, el Card controla tamaño; usamos un wrapper interno para observar redimensionados
   return (
-    <Card className={className} style={style} landscape={landscape} portrait={portrait}>
-      <div ref={containerRef} style={{ position: "relative", width: "100%", height: "100%" }}>
+    <Card
+      className={className}
+      style={style}
+      landscape={landscape}
+      portrait={portrait}
+      controlsAnimate="play"
+      loop={true}
+    >
+      <div style={{ position: "relative", width: "100%", height: "100%" }} ref={containerRef}>
         {content}
       </div>
     </Card>

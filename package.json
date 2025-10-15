@@ -8,6 +8,7 @@
     "build": "vite build && node scripts/checkSize.js",
     "build:temp": "vite build --mode temp",
     "finish": "node scripts/finish.js",
+    "finish-all": "node scripts/finish-all.mjs",
     "new": "node scripts/createProject.js",
     "lint": "eslint .",
     "preview": "vite preview"

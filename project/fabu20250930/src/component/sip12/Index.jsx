@@ -1,6 +1,6 @@
 import React from "react";
 import "../../../assets/style/sip12.css";
-import portrait from "../../../assets/image/sip12/portrait.webp";
+import portrait from "../../../assets/image/sip12/background.webp";
 import Card from "../../../../../src/component/Card";
 import CTA from "./CTA";
 import { useOrientation } from "../../../../../src/hook/useOrientation";
@@ -27,15 +27,15 @@ const Index = () => {
     portrait: {
       x: 50,
       y: 50,
-      width: 102,
-      height: 102,
+      width: 530,
+      height: 300,
       anchor: "middle",
     },
     landscape: {
-      x: 35,
-      y: 54,
-      width:45,
-      height: 110,
+      x: 34,
+      y: 61,
+      width:220,
+      height: 390,
       anchor: "middle",
     },
   };

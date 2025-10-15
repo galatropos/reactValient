@@ -33,9 +33,9 @@ const Index = () => {
     },
     landscape: {
       x: 35,
-      y: 50,
-      width: 30,
-      height: 100,
+      y: 59,
+      width: 46,
+      height: 120,
       anchor: "middle",
     },
   };

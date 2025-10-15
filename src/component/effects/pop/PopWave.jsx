@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Card from '../../Card'
 
-const PopWave = ({portrait, landscape, style , elements=[], intervalChange=2000 ,rotateWave=10 ,timeWave=1000,scale=1.2}) => {
+const PopWave = ({portrait, landscape, style , elements=[], intervalChange=2000 ,rotateWave=10 ,timeWave=1000,scale=1.2,timePop=300}) => {
 const [index, setIndex] = useState(0)
 const [element, setElement] = useState(elements[0])
 
@@ -32,7 +32,7 @@ const [element, setElement] = useState(elements[0])
             setElement(elements[index])
             portrait.scale=1
         }, 200)
-    }, 100)
+    }, timePop)
 
       }, [index]);
   return (

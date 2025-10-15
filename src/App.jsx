@@ -1,6 +1,9 @@
+import Project from "../project/theFoldie20251008/Index";
 import ScaledContainer from "./component/container";
-import Project from "../project/fabu20250930/Index";
 import  ElementProvider from "./context/ContextElement";
+
+
+
 function App() {
 
 

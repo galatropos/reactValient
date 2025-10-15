@@ -1,6 +1,6 @@
 import React from "react";
 import "../../../assets/style/sip11.css";
-import portrait from "../../../assets/image/sip11/background.png";
+import portrait from "../../../assets/image/sip11/background.webp";
 import Card from "../../../../../src/component/Card";
 import CTA from "./CTA";
 import { useOrientation } from "../../../../../src/hook/useOrientation";

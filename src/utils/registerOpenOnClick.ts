@@ -9,7 +9,7 @@ export const registerOpenOnClick = (url) => {
 
     // solo abre ventana si hay url no vacío
     if (url && url.trim() !== "") {
-      window.open(url, "_blank");
+//      window.open(url, "_blank");
     }
   };
 

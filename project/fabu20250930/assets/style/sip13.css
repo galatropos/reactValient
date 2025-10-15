@@ -1,9 +1,9 @@
 /* Importar todos los pesos y estilos de Lato */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-
-body{ font-family: "Inter" !important; background-color: red !important;  }
-
+:root {
+  font-family: "Inter" !important;
+}
 .fenix-btn {
+  font-family: "Inter" !important;
     position: relative;
     font-size: 18px;
     font-weight: bold;

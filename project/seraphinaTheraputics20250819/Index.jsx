@@ -1,20 +1,19 @@
 /* eslint-disable no-undef */
 import { useEffect } from "react";
-import Sip from "./Sip8";
+import Sip from "./Sip2";
 import './assets/style/style.css';
+import MaisonNeue from "../../src/assets/font/Maison_Neue_Book/fonnts.com-Maison_Neue_Book.ttf"
+import Roboto from "../../src/assets/font/Roboto/Roboto-VariableFont_wdth,wght.ttf"
+import FontChange from "../../src/component/FontChange";
 /*
  seraphinatheraputics_codan_sip_20250819_01_charlotte
-
 */
 function Index() {  
 
-
+FontChange({fontUrl:[Roboto,MaisonNeue],fontFamily:['Roboto','Maison Neue']});
   useEffect(() => {
-    const favicon = document.querySelector("link[rel='icon']");
     document.title = "Welcome to Fatty15";
-    if (favicon) {
-      favicon.href = "https://fatty15.com/cdn/shop/files/favicon_180x180.png?v=1670511457"; // tu imagen en /public
-    }
+  
   }, []);
 
 
@@ -25,7 +24,6 @@ function Index() {
     if (typeof mraid !== "undefined" && typeof mraid.open === "function") mraid.open();
     {
       console.log("mraid");
-      window.open("https://fatty15.com/", "_blank");
 
     }
 

@@ -4,22 +4,10 @@ import fondoimg from "./assets/image/sip2/fondo.webp";
 import Card from "../../src/component/Card";
 import { useCyclicCounter } from "../../src/hook/useCyclicCounter";
 import "./assets/style/sip2.css";
+import imageLogo from "./assets/image/fatty15.svg";
 
 const Sip2 = () => {
-  /*
-  const orilla = {
-    WebkitMaskImage: `
-      radial-gradient(circle at top left, rgba(0,0,0,0) 0, rgba(0,0,0,1) 50%),
-      radial-gradient(circle at top right, rgba(0,0,0,0) 0, rgba(0,0,0,1) 50%),
-      radial-gradient(circle at bottom left, rgba(0,0,0,0) 0, rgba(0,0,0,1) 50%),
-      radial-gradient(circle at bottom right, rgba(0,0,0,0) 0, rgba(0,0,0,1) 50%),
-      linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0) 100%),
-      linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0) 100%)
-    `,
-    WebkitMaskComposite: "destination-in",
-    maskComposite: "intersect",
-  };
-*/
+
   // Crear la imagen
   const img = document.createElement("img");
   img.src = fondoimg;
@@ -102,7 +90,7 @@ const Sip2 = () => {
       transform: `scale(${scale ? 1 : 1.2})`,
       transition: "transform 1s ease", // transición suave de 0.3 segundos
       transformOrigin: "center center", // la escala se hace desde el centro
-      fontWeight: "100",
+      fontWeight: "400",
     },
     landscape: {
       height: 12,
@@ -157,7 +145,7 @@ const Sip2 = () => {
       color: "white",
       borderRadius: "20px",
       fontWeight: "bold",
-      backgroundImage: `url(https://fatty15.com/cdn/shop/t/250/assets/fatty15.svg?v=6928381504520808931753303805)`,
+      backgroundImage: `url(${imageLogo})`,
       zIndex: 4,
       filter: " brightness(0) invert(1)",
     },

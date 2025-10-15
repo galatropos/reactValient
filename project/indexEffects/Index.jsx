@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import Card from "../../src/component/Card";
 import ExamplePopSlotMachine from "./src/component/pop/ExamplePopSlotMachine";
 import ExamplePopWave from "./src/component/pop/ExamplePopWave";

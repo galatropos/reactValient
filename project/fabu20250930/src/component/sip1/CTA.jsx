@@ -34,7 +34,7 @@ const CTA = () => {
       opacity: 1,
       animate,
       x: 50,
-      y: 92,
+      y: 89,
     },
     controlsAnimate: "play",
     loop: true,

@@ -1,296 +1,360 @@
-// src/component/CarouselDefault.jsx
-import React, { useRef, useEffect, useState } from "react";
-import { flushSync } from "react-dom";
+// src/component/effects/carousel/CarouselDefault.jsx
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import Card from "../../Card";
-import useCarouselIndexes from "../../../hook/useCarouselIndexes";
 
-const DEFAULT_STYLE = { border: "1px solid black" };
 const DEFAULT_PORTRAIT_BASE = { width: 10, height: 10, anchor: "middle" };
 const DEFAULT_LANDSCAPE_BASE = { width: 10, height: 10, anchor: "middle" };
 
-const functionCreationIndexCarousel = (maxObjectCarrousel, sizeElement) => {
-  const result = [];
-  for (let i = 0; i < maxObjectCarrousel; i++) result.push(i % sizeElement);
-  return result;
+// Helpers
+const quantize = (n) => {
+  const px = 1 / ((typeof window !== "undefined" && window.devicePixelRatio) || 1);
+  return Math.round(n / px) * px;
+};
+const getInnerHeightPx = (el) => {
+  if (!el) return 0;
+  const cs = getComputedStyle(el);
+  const pt = parseFloat(cs.paddingTop) || 0;
+  const pb = parseFloat(cs.paddingBottom) || 0;
+  return Math.max(0, Math.floor(el.clientHeight - pt - pb));
+};
+const getInnerWidthPx = (el) => {
+  if (!el) return 0;
+  const cs = getComputedStyle(el);
+  const pl = parseFloat(cs.paddingLeft) || 0;
+  const pr = parseFloat(cs.paddingRight) || 0;
+  return Math.max(0, Math.floor(el.clientWidth - pl - pr));
 };
 
-export default function CarouselDefault({
-  elements = [],
-  start = 0,
-  end = 100,
-  // Puedes ajustar estos 3 para ver mejor
-  itemsPerView = 3,         // cuántas tarjetas visibles
-  minItemWidth = 220,       // ancho mínimo legible
-  maxItemWidth = 360,       // ancho máximo (opcional)
-  stepDuration = 1200,      // ms para recorrer EXACTAMENTE 1 tarjeta
-  gapPx = 16,               // separación entre tarjetas
-  y = 50,
-  style = DEFAULT_STYLE,
-  portraitBase = DEFAULT_PORTRAIT_BASE,
-  landscapeBase = DEFAULT_LANDSCAPE_BASE,
-}) {
-  const maxObjectCarrousel = 18;
-  const sizeElement = Math.max(elements.length, 1); // evita % 0
+// Dirección → eje + signo
+function resolveAxisAndDir(dirStr) {
+  const d = (dirStr || "").toLowerCase();
+  if (d === "left")   return { axis: "h", sign: -1 };
+  if (d === "right")  return { axis: "h", sign: +1 };
+  if (d === "top")    return { axis: "v", sign: -1 };
+  if (d === "bottom") return { axis: "v", sign: +1 };
+  return { axis: "h", sign: d === "left" ? -1 : +1 };
+}
 
-  // índices iniciales (no cambiar nombre)
-  const initialRef = useRef(
-    functionCreationIndexCarousel(maxObjectCarrousel, sizeElement)
-  );
+/** Fuerza el ajuste de cualquier <img> descendiente del slot */
+function forceFitDescendantImg(slotEl, axis, safeW, safeH) {
+  if (!slotEl) return;
+  const img = slotEl.querySelector("img");
+  if (!img) return;
 
-  // hook (no cambiar nombre)
-  const { indexArray, left, right, keys, reset } =
-    useCarouselIndexes(initialRef.current, sizeElement);
+  // Asegurar carga “rápida”
+  try { img.loading = "eager"; } catch {}
+  try { img.decoding = "async"; } catch {}
 
-  // --- Refs/State para animación por transform ---
-  const containerRef = useRef(null); // Card con overflow hidden (clip)
-  const trackRef = useRef(null);     // fila que movemos con translateX
-  const xRef = useRef(0);            // desplazamiento acumulado del track
+  // Ajuste de tamaño por eje
+  if (axis === "h") {
+    // Alto fijo, ancho auto (contain)
+    img.style.height = `${safeH}px`;
+    img.style.maxHeight = `${safeH}px`;
+    img.style.width = "auto";
+    img.style.maxWidth = "none";
+  } else {
+    // Ancho fijo, alto auto (contain)
+    img.style.width = `${safeW}px`;
+    img.style.maxWidth = `${safeW}px`;
+    img.style.height = "auto";
+    img.style.maxHeight = "none";
+  }
+
+  // Otras seguridades
+  img.style.objectFit = "contain";
+  img.style.display = "block";
+  img.style.boxSizing = "border-box";
+}
+
+/**
+ * Carrusel infinito que acepta <img> directos y componentes que renderizan <img>
+ * (por ejemplo, <RandomImg />)
+ */
+export default function CarouselDefault(props) {
+  const {
+    elements = [],
+    gapPx = 16,
+    stepDuration = 1200, // ms
+    portrait = DEFAULT_PORTRAIT_BASE,
+    landscape = DEFAULT_LANDSCAPE_BASE,
+    initialDirection = "right",
+    direction, // "left" | "right" | "top" | "bottom"
+  } = props;
+
+  // compat por si vino con typo "sptepDuration"
+  const effectiveStepDuration = props.sptepDuration ?? stepDuration;
+
+  const containerRef = useRef(null);
+  const trackRef = useRef(null);
   const rafRef = useRef(0);
-  const stepWRef = useRef(0);        // (ancho tarjeta + gap), cuantizado a px físico
+  const startRef = useRef(null);
+  const isPausedRef = useRef(false);
 
-  // Ancho visual por tarjeta (lo usamos para estilos)
-  const [itemWidthPx, setItemWidthPx] = useState(minItemWidth);
+  // Medidas visibles
+  const [cardInnerH, setCardInnerH] = useState(0); // alto para horizontal
+  const [cardInnerW, setCardInnerW] = useState(0); // ancho para vertical
+  const [halfLenPx, setHalfLenPx] = useState(0);   // longitud de UNA copia del track
+  const [ratios, setRatios] = useState([]);        // aspect ratio por item (w/h)
 
-  // cuantiza a píxel físico (evita drift de subpíxeles)
-  const quantize = (n) => {
-    const px = 1 / (window.devicePixelRatio || 1);
-    return Math.round(n / px) * px;
-  };
+  // Eje y signo según dirección
+  const { axis, sign } = resolveAxisAndDir(direction || initialDirection);
 
-  // Calcular ancho legible por tarjeta en base al contenedor e itemsPerView
-  const recalcWidths = () => {
+  // Lista duplicada para marquee infinito
+  const doubled = useMemo(() => {
+    if (!elements.length) return [];
+    return [...elements, ...elements];
+  }, [elements]);
+
+  // Medir contenedor
+  const measureCard = () => {
     const el = containerRef.current;
     if (!el) return;
-
-    // ancho disponible (clientWidth ya descuenta scrollbar y padding interno del Card)
-    const avail = el.clientWidth;
-    const totalGaps = gapPx * Math.max(0, itemsPerView - 1);
-    let w = Math.floor((avail - totalGaps) / itemsPerView);
-
-    // acotar entre min y max para legibilidad
-    w = Math.max(minItemWidth, Math.min(maxItemWidth, w));
-
-    // si el contenedor es muy chico, al menos respeta minItemWidth
-    setItemWidthPx(w);
-    stepWRef.current = quantize(w + gapPx);
+    setCardInnerH(getInnerHeightPx(el));
+    setCardInnerW(getInnerWidthPx(el));
   };
 
-  // Medir al montar y en resize (ResizeObserver para precisión)
+  // Medir media pista (la mitad del duplicado)
+  const measureHalfLen = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const half = axis === "h"
+      ? Math.floor(track.scrollWidth / 2)
+      : Math.floor(track.scrollHeight / 2);
+    setHalfLenPx(half);
+  };
+
+  // Montaje + resize (debounced)
   useEffect(() => {
-    recalcWidths();
-    let ro;
+    const reflow = () => {
+      measureCard();
+      setTimeout(measureHalfLen, 0);
+    };
+
+    reflow();
+    let ro, t;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(reflow, 120);
+    };
     try {
-      ro = new ResizeObserver(() => {
-        const prevStep = stepWRef.current;
-        recalcWidths();
-        // si cambió mucho el ancho, resetea la posición para evitar saltos
-        if (Math.abs(stepWRef.current - prevStep) > 0.5) {
-          const track = trackRef.current;
-          if (track) {
-            cancelAnimationFrame(rafRef.current);
-            xRef.current = 0;
-            track.style.transition = "none";
-            track.style.transform = "translate3d(0px,0,0)";
-            // reflow para que la siguiente transición aplique
-            // eslint-disable-next-line no-unused-expressions
-            track.offsetHeight;
-            startLoop(); // retomamos animación
-          }
-        }
-      });
+      ro = new ResizeObserver(onResize);
       if (containerRef.current) ro.observe(containerRef.current);
     } catch {
-      // ResizeObserver no disponible
-      window.addEventListener("resize", recalcWidths);
+      window.addEventListener("resize", onResize);
     }
     return () => {
       if (ro) ro.disconnect();
-      else window.removeEventListener("resize", recalcWidths);
+      window.removeEventListener?.("resize", onResize);
+      clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsPerView, minItemWidth, maxItemWidth, gapPx]);
+  }, [axis]);
 
-  // ===== Animación continua por transform (derecha) =====
-  const startLoop = () => {
+  /** Medir ratios desde el DOM (sirve para componentes que internamente tienen <img>) */
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !elements.length) { setRatios([]); return; }
+
+    // Solo la primera mitad (sin duplicado)
+    const imgs = Array.from(track.querySelectorAll("img")).slice(0, elements.length);
+    if (imgs.length === 0) { setRatios(new Array(elements.length).fill(1)); return; }
+
+    const next = new Array(elements.length).fill(1);
+    let pending = imgs.length;
+
+    imgs.forEach((img, i) => {
+      const done = () => {
+        const w = img.naturalWidth || 0;
+        const h = img.naturalHeight || 0;
+        next[i] = w > 0 && h > 0 ? w / h : 1;
+        if (--pending === 0) setRatios(next);
+      };
+      if (img.complete) {
+        done();
+      } else {
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      }
+    });
+  }, [elements, axis]);
+
+  // Re-medición de halfLen cuando cambien ratios o medidas
+  useEffect(() => {
+    const id = setTimeout(measureHalfLen, 0);
+    return () => clearTimeout(id);
+  }, [ratios, cardInnerH, cardInnerW, gapPx, elements, axis]);
+
+  // Animación (horizontal/vertical) con pre-wrap
+  useEffect(() => {
+    let last = 0;
+    let pos = 0; // desplazamiento x o y según eje
     const track = trackRef.current;
     if (!track) return;
-    let last = 0;
 
-    track.style.willChange = "transform";
-
-    const durSec = Math.max(0.2, stepDuration / 1000); // s por tarjeta
+    const durSec = Math.max(0.2, effectiveStepDuration / 1000);
+    const baseSize = axis === "h" ? (cardInnerH || 200) : (cardInnerW || 200);
+    const pxPerSec = Math.max(60, baseSize / durSec);
 
     const loop = (ts) => {
+      if (isPausedRef.current) return;
       if (!last) last = ts;
       const dt = (ts - last) / 1000;
       last = ts;
 
-      const W = stepWRef.current || (quantize(itemWidthPx + gapPx), stepWRef.current);
-      if (!W) {
-        rafRef.current = requestAnimationFrame(loop);
-        return;
+      pos += (pxPerSec * sign) * dt;
+
+      const limit = halfLenPx;
+      if (limit > 0) {
+        const viewport = axis === "h"
+          ? (containerRef.current ? containerRef.current.clientWidth : 0)
+          : (containerRef.current ? containerRef.current.clientHeight : 0);
+        const preWrap = Math.max(0, limit - viewport - gapPx);
+
+        if (sign < 0) {
+          if (pos <= -preWrap) pos += limit;
+        } else {
+          if (pos >= preWrap) pos -= limit;
+        }
       }
 
-      const speed = W / durSec;  // px/s → recorre 1 tarjeta en stepDuration
-      const dx = speed * dt;
-
-      // acumulamos desplazamiento hacia la izquierda (contenido se mueve a la izq.)
-      xRef.current = xRef.current - dx;
-
-      // cuando superamos 1 tarjeta, rotamos y compensamos en el MISMO frame
-      while (xRef.current <= -W) {
-        xRef.current += W;
-        flushSync(() => {
-          right(); // o left() si quieres al revés
-        });
+      if (axis === "h") {
+        track.style.transform = `translate3d(${quantize(pos)}px,0,0)`;
+      } else {
+        track.style.transform = `translate3d(0,${quantize(pos)}px,0)`;
       }
-
-      track.style.transform = `translate3d(${quantize(xRef.current)}px, 0, 0)`;
       rafRef.current = requestAnimationFrame(loop);
     };
 
-    rafRef.current = requestAnimationFrame(loop);
-  };
-
-  useEffect(() => {
-    startLoop();
-    return () => cancelAnimationFrame(rafRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [right, stepDuration]);
-
-  // ===== Controles manuales (paso a paso) opcionales =====
-  const stepRight = () => {
-    const track = trackRef.current;
-    const W = stepWRef.current;
-    if (!track || !W) return;
-
-    track.style.transition = `transform ${Math.max(120, stepDuration)}ms cubic-bezier(.25,.1,.25,1)`;
-    track.style.transform = `translate3d(${quantize(xRef.current - W)}px, 0, 0)`;
-    const onEnd = () => {
-      track.removeEventListener("transitionend", onEnd);
-      flushSync(() => right());
-      xRef.current = 0;
-      track.style.transition = "none";
-      track.style.transform = `translate3d(0px,0,0)`;
-      // eslint-disable-next-line no-unused-expressions
-      track.offsetHeight;
+    startRef.current = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      last = 0;
+      isPausedRef.current = false;
+      rafRef.current = requestAnimationFrame(loop);
     };
-    track.addEventListener("transitionend", onEnd, { once: true });
-  };
 
-  const stepLeft = () => {
-    const track = trackRef.current;
-    const W = stepWRef.current;
-    if (!track || !W) return;
+    startRef.current();
 
-    track.style.transition = `transform ${Math.max(120, stepDuration)}ms cubic-bezier(.25,.1,.25,1)`;
-    track.style.transform = `translate3d(${quantize(xRef.current + W)}px, 0, 0)`;
-    const onEnd = () => {
-      track.removeEventListener("transitionend", onEnd);
-      flushSync(() => left());
-      xRef.current = 0;
-      track.style.transition = "none";
-      track.style.transform = `translate3d(0px,0,0)`;
-      // eslint-disable-next-line no-unused-expressions
-      track.offsetHeight;
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
     };
-    track.addEventListener("transitionend", onEnd, { once: true });
+  }, [effectiveStepDuration, cardInnerH, cardInnerW, halfLenPx, gapPx, axis, sign]);
+
+  // Hover
+  const handleEnter = () => {
+    isPausedRef.current = true;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+  };
+  const handleLeave = () => {
+    if (isPausedRef.current) {
+      isPausedRef.current = false;
+      startRef.current?.();
+    }
   };
 
-  const hardReset = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    cancelAnimationFrame(rafRef.current);
-    track.style.transition = "none";
-    xRef.current = 0;
-    track.style.transform = `translate3d(0px,0,0)`;
-    // eslint-disable-next-line no-unused-expressions
-    track.offsetHeight;
-    reset();
-    startLoop();
-  };
-
-  // ===== estilos de contenedor y tarjetas con foco en legibilidad =====
-  const baseCarrousel = {
-    style: {
-      border: "1px solid #ddd",
-      overflow: "scroll",
-      padding: 8,
-
-      background: "#fafafa",
-    },
-    portrait: { width: 40, y: 50, x: 10 },
-    landscape: {},
-  };
-
-  const controlBar = {
-    style: {
-      border: "1px solid #ddd",
-      display: "flex",
-      gap: 8,
-      padding: 8,
-      background: "#fff",
-    },
-    portrait: { width: 30, y: 30, x: 10 },
-    landscape: {},
-  };
+  // Render
+  const safeH = cardInnerH || 200;
+  const safeW = cardInnerW || 200;
 
   return (
-    <>
-      {/* Barra de controles manuales (opcional) */}
-      <Card {...controlBar}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={stepLeft}>⬅️ Left</button>
-          <button onClick={stepRight}>Right ➡️</button>
-          <button onClick={hardReset}>Reset</button>
-        </div>
-      </Card>
+    <Card
+      style={{
+        overflow: "hidden",
+        padding: 8,
+        willChange: "transform",
+        backfaceVisibility: "hidden",
+      }}
+      portrait={portrait}
+      landscape={landscape}
+      ref={containerRef}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      <div
+        ref={trackRef}
+        style={{
+          display: "flex",
+          flexDirection: axis === "h" ? "row" : "column",
+          alignItems: "stretch",
+          gap: gapPx,
+          transform: "translate3d(0,0,0)",
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+          height: axis === "h" ? `${safeH}px` : "auto",
+          width: axis === "v" ? `${safeW}px` : "auto",
+          whiteSpace: axis === "h" ? "nowrap" : "normal",
+        }}
+      >
+        {doubled.map((el, i) => {
+          const baseIdx = elements.length ? (i % elements.length) : 0;
+          const ratio = ratios[baseIdx] || 1;
+          const isImg = React.isValidElement(el) && el.type === "img";
 
-      {/* Contenedor clip */}
-      <Card {...baseCarrousel} ref={containerRef}>
-        {/* Track animado por transform (NO usamos scrollLeft) */}
-        <div
-          ref={trackRef}
-          style={{
-            display: "flex",
-            gap: gapPx,
-            transform: "translate3d(0px, 0, 0)",
-          }}
-        >
-          {indexArray.map((idx, i) => (
+          // Tamaños por eje:
+          const itemW = axis === "h" ? Math.max(1, Math.round(safeH * ratio)) : safeW;
+          const itemH = axis === "h" ? safeH : Math.max(1, Math.round(safeW / ratio));
+
+          // ref de slot para forzar el ajuste del <img> descendiente
+          const slotRef = (node) => {
+            if (node) {
+              // Post-layout: ajustar cualquier <img> hijo
+              requestAnimationFrame(() => forceFitDescendantImg(node, axis, safeW, safeH));
+            }
+          };
+
+          return (
             <div
-              key={keys?.[i] ?? i}
+              key={`slot-${i}`}
+              data-slot-idx={baseIdx}
+              ref={slotRef}
               style={{
-                width: `${itemWidthPx}px`,
-                flex: `0 0 ${itemWidthPx}px`,
-                // altura mínima opcional para dar aire
-                minHeight: 120,
-                // fondo/box para separar tarjetas
-                background: "#fff",
-                border: "1px solid #eee",
+                width: `${itemW}px`,
+                height: `${itemH}px`,
                 borderRadius: 10,
-                padding: 12,
+                padding: isImg ? 0 : 12,
                 boxSizing: "border-box",
-                // legibilidad del texto
-                color: "#222",
-                fontSize: 14,
-                lineHeight: 1.35,
-                letterSpacing: 0.2,
-                textAlign: "left",
-                whiteSpace: "normal",
-                wordBreak: "break-word",
                 overflow: "hidden",
-                // rendimiento
+                display: "grid",
+                placeItems: "center",
                 transform: "translateZ(0)",
+                backfaceVisibility: "hidden",
+                willChange: "transform",
                 contain: "layout paint",
               }}
             >
-              {/* Si el elemento interno tiene su propio layout, dale width:100% */}
-              <div style={{ width: "100%" }}>{elements[idx]}</div>
+              {/* Contenedor 100% para cualquier contenido */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "grid",
+                  placeItems: "center",
+                  overflow: "hidden",
+                }}
+              >
+                {isImg
+                  ? React.cloneElement(el, {
+                      style: {
+                        ...(el.props.style || {}),
+                        ...(axis === "h"
+                          ? { height: `${safeH}px`, width: "auto", maxHeight: `${safeH}px` }
+                          : { width: `${safeW}px`, height: "auto", maxWidth: `${safeW}px` }),
+                        display: "block",
+                        boxSizing: "border-box",
+                        objectFit: "contain",
+                      },
+                      loading: "eager",
+                      decoding: "async",
+                    })
+                  : el}
+              </div>
             </div>
-          ))}
-        </div>
-      </Card>
-    </>
+          );
+        })}
+      </div>
+    </Card>
   );
 }

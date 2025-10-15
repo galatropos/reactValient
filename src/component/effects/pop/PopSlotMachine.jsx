@@ -15,31 +15,38 @@ const defaultLandscape = {
  * controls: "continue" | "pause"
  * setControls: React.Dispatch<React.SetStateAction<"continue" | "pause">>
  */
-export const PopSlotMachine = ({
+const PopSlotMachine = ({
   elements = [],
   portrait = defaultPortait,
   landscape = defaultLandscape,
-  style ,
-  interval = 200,          // cambio de imagen continuo
-  timeOutContinue = 5000,  // estando en "continue", tras este tiempo pasa a "pause"
-  timeOutPause = 2000,     // estando en "pause", tras este tiempo pasa a "continue"
-  controls = "continue",   // <-- CONTROLADO: "continue" | "pause"
-  setControls,             // <-- CONTROLADO: setter provisto por el padre
+  style,
+  interval = 200,
+  timeOutContinue = 5000,
+  timeOutPause = 4000,
+  controls = "continue",
+  setControls,
 }) => {
   const [index, setIndex] = useState(0);
   const len = elements.length;
 
-  // refs para timers/intervalos
+  // --- NUEVO: modo controlado vs no controlado ---
+  const isControlled = typeof setControls === "function";
+  const [innerControls, setInnerControls] = useState(controls);
+  // valor efectivo de controls
+  const controlsValue = isControlled ? controls : innerControls;
+  const setControlsValue = isControlled ? setControls : setInnerControls;
+
   const intervalRef = useRef(null);
   const continueTimerRef = useRef(null);
   const pauseTimerRef = useRef(null);
 
-  // Intervalo que NUNCA se detiene; solo avanza si controls === "continue"
+  // Intervalo que solo avanza en "continue"
   useEffect(() => {
+    if (!len) return; // sin elementos, no hagas nada
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = setInterval(() => {
-      if (controls === "continue") {
+      if (controlsValue === "continue") {
         setIndex((i) => (i + 1) % len);
       }
     }, Math.max(1, interval));
@@ -48,27 +55,23 @@ export const PopSlotMachine = ({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     };
-  }, [interval, len, controls]);
+  }, [interval, len, controlsValue]);
 
-  // Orquestación automática según controls
+  // Orquestación automática
   useEffect(() => {
-    // Limpia cualquier timer previo
     if (continueTimerRef.current) { clearTimeout(continueTimerRef.current); continueTimerRef.current = null; }
     if (pauseTimerRef.current)    { clearTimeout(pauseTimerRef.current);    pauseTimerRef.current = null; }
 
-    if (!setControls) return; // por si se usa sin control externo
+    if (!len) return;
 
-    if (controls === "continue") {
-      // programa pasar a "pause" tras timeOutContinue
+    if (controlsValue === "continue") {
       continueTimerRef.current = setTimeout(() => {
-        // fija una imagen aleatoria al entrar en pausa
-        setIndex(getRandomArrayIndex(elements));
-        setControls("pause");
+        setIndex(getRandomArrayIndex(elements)); // fija aleatorio al pausar
+        setControlsValue("pause");
       }, Math.max(0, timeOutContinue));
-    } else {
-      // controls === "pause": programa volver a "continue"
+    } else { // "pause"
       pauseTimerRef.current = setTimeout(() => {
-        setControls("continue");
+        setControlsValue("continue");
       }, Math.max(0, timeOutPause));
     }
 
@@ -76,16 +79,19 @@ export const PopSlotMachine = ({
       if (continueTimerRef.current) { clearTimeout(continueTimerRef.current); continueTimerRef.current = null; }
       if (pauseTimerRef.current)    { clearTimeout(pauseTimerRef.current);    pauseTimerRef.current = null; }
     };
-  }, [controls, timeOutContinue, timeOutPause, setControls, elements]);
+  }, [controlsValue, timeOutContinue, timeOutPause, setControlsValue, elements, len]);
 
   // Evitar desbordes si cambia la lista
   useEffect(() => {
-    if (index >= len) setIndex(0);
+    if (index >= len && len > 0) setIndex(0);
   }, [len, index]);
 
   return (
     <Card portrait={portrait} landscape={landscape} style={style}>
-      {elements[index]}
+      {len ? elements[index] : null}
     </Card>
   );
 };
+
+
+export default PopSlotMachine;

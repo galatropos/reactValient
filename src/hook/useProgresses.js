@@ -1,5 +1,5 @@
 // src/hook/useProgresses.js
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useProgress } from "./useProgress";
 
 const lerp = (t, a, b) => a + (b - a) * t;
@@ -37,8 +37,10 @@ export function useProgresses({
   onStepUpdate,
   onSequenceFinish,
   loop = false,
-  repeat = null, // 🔹 número de repeticiones
+  repeat = null,          // número de repeticiones
+  onStepChange,           // (stepIndex) => void  ✅ NUEVO
 }) {
+  // Solo valores numéricos para interpolación
   const defaultValueFinish = useMemo(
     () =>
       Object.fromEntries(
@@ -56,28 +58,41 @@ export function useProgresses({
   const [section, setSection] = useState(0);
   const [internal, setInternal] = useState("stop");
   const [sequenceValue, setSequenceValue] = useState(defaultValueFinish);
-  const [cycleCount, setCycleCount] = useState(0); // 🔹 contador de ciclos
+  const [cycleCount, setCycleCount] = useState(0); // contador de ciclos
 
   const effectiveAction = action === "pause" ? "pause" : internal;
 
+  // Notificar cambio de paso (solo cuando realmente cambie)
+  const prevSectionRef = useRef(section);
+  useEffect(() => {
+    if (prevSectionRef.current !== section) {
+      prevSectionRef.current = section;
+      onStepChange?.(section);
+    }
+  }, [section, onStepChange]);
+
+  // Responder a action externa
   useEffect(() => {
     if (action === "stop") {
       setInternal("stop");
       setSection(0);
       setSequenceValue(defaultValueFinish);
-      setCycleCount(0); // reinicia el contador
+      setCycleCount(0);
+      onStepChange?.(0); // opcional: notifica reset al paso 0
     } else if (action === "play") {
       setInternal((prev) => (prev === "finish" ? "finish" : "play"));
     }
-  }, [action, defaultValueFinish]);
+  }, [action, defaultValueFinish, onStepChange]);
 
+  // Mantener play activo cuando cambia de sección y no está “finish”
   useEffect(() => {
     if (action === "play" && internal !== "finish") {
       setInternal("play");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
 
+  // Motor de avance por paso
   useProgress({
     initial: 0,
     finish: 1,
@@ -90,6 +105,16 @@ export function useProgresses({
         const [i, f] = r[key];
         current[key] = lerp(s.progress, i, f);
       }
+
+      // Copiar claves NO numéricas del delta del paso (p.ej. anchor)
+      const stepDelta = animate[section]?.[0] || null;
+      if (stepDelta) {
+        for (const k of Object.keys(stepDelta)) {
+          const v = stepDelta[k];
+          if (typeof v !== "number") current[k] = v;
+        }
+      }
+
       setSequenceValue(current);
       onStepUpdate?.({ ...s, section, value: current });
 
@@ -99,32 +124,32 @@ export function useProgresses({
         const last = section >= animate.length - 1;
 
         if (last) {
-          // 🔹 completamos un ciclo
+          // ciclo completo
           setCycleCount((c) => {
             const newCount = c + 1;
 
-            // Caso 1: repeat definido y alcanzado
+            // repeat definido y alcanzado
             if (repeat !== null && newCount >= repeat) {
               setInternal("finish");
               onSequenceFinish?.();
               return newCount;
             }
 
-            // Caso 2: loop infinito
+            // loop infinito
             if (loop && action === "play") {
               setInternal("stop");
-              setSection(0);
+              setSection(0); // disparará onStepChange(0)
               return newCount;
             }
 
-            // Caso 3: repeat definido y todavía quedan ciclos
+            // repeat definido y aún quedan ciclos
             if (repeat !== null && newCount < repeat) {
               setInternal("stop");
-              setSection(0);
+              setSection(0); // disparará onStepChange(0)
               return newCount;
             }
 
-            // Caso 4: sin repeat ni loop → terminar
+            // sin repeat ni loop → terminar
             setInternal("finish");
             onSequenceFinish?.();
             return newCount;
@@ -132,17 +157,19 @@ export function useProgresses({
           return;
         }
 
-        // Avanza a la siguiente sección
+        // Avanza a la siguiente sección (paso del animate)
         setInternal("stop");
-        setSection((idx) => idx + 1);
+        setSection((idx) => idx + 1); // disparará onStepChange(idx+1)
       }
     },
   });
 
   return {
     sequenceValue,
-    section,
+    section,                   // índice actual del paso
+    stepIndex: section,        // alias claro
+    stepCount: animate.length, // total de pasos
     status: effectiveAction,
-    cycleCount, // 🔹 lo exponemos por si quieres mostrar en UI
+    cycleCount,
   };
 }

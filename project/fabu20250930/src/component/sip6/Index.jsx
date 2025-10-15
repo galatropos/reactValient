@@ -32,10 +32,10 @@ const Index = () => {
       anchor: "middle",
     },
     landscape: {
-      x: 50,
+      x: 54,
       y: 50,
-      width: 100,
-      height: 100,
+      width: 107,
+      height: 106,
       anchor: "middle",
     },
   };

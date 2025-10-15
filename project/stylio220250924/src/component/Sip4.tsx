@@ -1,6 +1,6 @@
 import React from "react";
-import portrait from "../../assets/video/portrait_4.webm";
-import landscape from "../../assets/video/landscape_4.webm";
+import portrait from "../../assets/video/portrait_4.mp4";
+import landscape from "../../assets/video/landscape_4.mp4";
 import VideoToFramesPlayer from "../../../../src/component/VideoToFramesPlayer";
 import { videoVariables } from "./utils";
 const tools = {

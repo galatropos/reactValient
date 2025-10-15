@@ -26,16 +26,16 @@ const Index = () => {
 
     portrait: {
       x: 50,
-      y: 50,
-      width: 280,
-      height: 280,
+      y: 45,
+      width: 430,
+      height: 160,
       anchor: "middle",
     },
     landscape: {
       x: 50,
-      y: 45,
-      width:150,
-      height: 150,
+      y: 52,
+      width:180,
+      height: 310,
       anchor: "middle",
     },
   };

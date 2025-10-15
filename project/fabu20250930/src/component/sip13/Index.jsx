@@ -1,12 +1,16 @@
 import React from 'react'
-import portrait from "../../../assets/video/portrait.webm";
+import portrait from "../../../assets/video/portrait.mp4";
 import backgroundImg from "../../../assets/image/background2.webp";
 import CTA from './CTA';
 import VideoToFramesPlayer from '../../../../../src/component/VideoToFramesPlayer';
 import Card from '../../../../../src/component/Card';
 import "../../../assets/style/sip13.css";
+import usePreloadBackground from '../../../../../src/hook/usePreloadBackground';
 
 const Index = () => {
+
+  usePreloadBackground(backgroundImg);
+
     const videoVariables={
         style: {     WebkitMaskImage: `
             linear-gradient(to right, transparent, red 5%, red 90%, transparent),

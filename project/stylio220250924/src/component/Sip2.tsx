@@ -1,6 +1,6 @@
 import React from 'react'
-import portrait from "../../assets/video/portrait_2.webm";
-import landscape from "../../assets/video/landscape_2.webm";
+import portrait from "../../assets/video/portrait_2.mp4";
+import landscape from "../../assets/video/landscape_2.mp4";
 import VideoToFramesPlayer from '../../../../src/component/VideoToFramesPlayer';
 import { videoVariables } from './utils';
 
