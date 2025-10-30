@@ -8,11 +8,10 @@ const StreamMoveVertical = ({
   landscape,
   style,
   elements = [],
-  // tiempos base (los usa animateMoveObject y los telones)
-  invert=false,
-  cycleDelay=5700,  
-  durationIn=500, 
-  durationOut=500, 
+  invert = false,
+  cycleDelay = 5700,
+  durationIn = 350,
+  durationOut = 500,
 }) => {
   const [index, setIndex] = useState(0);
   const orientation = useOrientation();
@@ -25,73 +24,103 @@ const StreamMoveVertical = ({
       backgroundRepeat: "no-repeat",
       backgroundSize: "contain",
       backgroundPosition: "center",
+      // ⬇️ centrado del contenido del Card
+      display: "grid",
+      placeItems: "center",
     }),
     [style]
   );
 
   // ▶️ Secuencia “sensor”
-  // Cambiamos el elemento al entrar al paso 1
   const animateMoveObject1 = [
-    [{ y: 5 }, 0],                // 0 (instantáneo)
-    [{ y: -5 }, durationIn],      // 1 ⬅️ aquí avanzamos index
-    [{}, cycleDelay],             // 2
-    [{ y: 0 }, durationOut / 2],  // 3
-    [{ y: 0 }, durationOut / 2],  // 4
+    [{  }, 0],
+    [{ y: -5 }, durationIn],
+    [{}, cycleDelay],
+    [{ y: -5 }, durationOut ],
+    [{ y: 0 },300 ],
   ];
   const animateMoveObject2 = [
-    [{ y: -5 }, 0],                // 0 (instantáneo)
-    [{ y: 5 }, durationIn],      // 1 ⬅️ aquí avanzamos index
-    [{}, cycleDelay],             // 2
-    [{ y: 0 }, durationOut / 2],  // 3
-    [{ y: 0 }, durationOut / 2],  // 4
+    [{  }, 0],
+    [{ y: 5 }, durationIn],
+    [{}, cycleDelay],
+    [{ y: +5 }, durationOut ],
+    [{ y: 0 },300 ],
+
   ];
+  const animateMoveObject = invert ? animateMoveObject2 : animateMoveObject1;
 
-  const animateMoveObject = invert? animateMoveObject2:animateMoveObject1;
-
-
-  // Telones (opcionales)
+  // Telones
   const animateIn1 = [
-    [{ y: -height }, durationIn],
-    [{ opacity: 0, y: height * 2 }, 0],
-    [{ opacity: 1 }, 0],
-    [{}, cycleDelay-100],
-    [{ y: -height }, durationOut],
-    [{}, 100],
+    [{ height:-height,anchor:"top"}, durationIn],//abrir el telon
+    [{ y:height,anchor:"bottom"}, 0],//abrir el telon
+    [{}, cycleDelay - 100],
+    [{height:height,anchor:"bottom"},durationOut],
+    [{anchor:"bottom"},400],
+ 
+
   ];
   const animateIn2 = [
+    [{y:height,anchor:"top"}, 0],//abrir el telon
+    [{ height:-height,anchor:"bottom"}, durationIn],//abrir el telon
+    [{ height:0,y:-height,}, 0],//abrir el telon
+    [{}, cycleDelay - 100],
+    [{ height:height,anchor:"top"}, durationOut],//abrir el telon
+    [{anchor:"top"},400],
+
+
+
+   // [{ y:height,anchor:"bottom"}, 0],//abrir el telon
+    //[{}, cycleDelay - 100],
+   // [{}, 100],
+ //   [{height:height,anchor:"bottom"},durationOut],
+    /*
     [{ y: height }, durationIn],
     [{ opacity: 0, y: -height * 2 }, 0],
     [{ opacity: 1 }, 0],
-    [{}, cycleDelay-100],
+    [{}, cycleDelay - 100],
     [{ y: height }, durationOut],
     [{}, 100],
-
-  ];
-  const animateIn = invert? animateIn2:animateIn1;
-
+  */
+    ];
+  const animateIn = invert ? animateIn2 : animateIn1;
 
   const configBlankIn = {
     style: { background: "white", border: "1px solid #fff" },
-    portrait: { opacity: 1, ...portrait, animate: animateIn },
-    landscape: { opacity: 1, ...landscape, animate: animateIn },
+    portrait: { opacity: 1, ...portrait, animate: animateIn,
+      anchor:invert?"left-top":"bottom",
+      width:200
+
+     },
+    landscape: { opacity: 1, ...landscape, animate: animateIn, 
+      anchor:invert?"top":"bottom",
+      y:invert?landscape.y-height:landscape.y,
+
+
+    },
     loop: true,
     controlsAnimate: "play",
   };
 
-
   const configoOuter1 = {
     style: { background: "white", border: "1px solid #fff" },
-    portrait: { opacity: 1, ...portrait, y: portrait.y + height },
-    landscape: { opacity: 1, ...landscape, y: landscape.y + height },
+    portrait: { opacity: 1, ...portrait, y: portrait.y + height,height:10 },
+    landscape: { opacity: 1, ...landscape, 
+      y:invert?landscape.y+10 :landscape.y+50,
+      height:10 
+
+    },
   };
 
   const configoOuter2 = {
     style: { background: "white", border: "1px solid #fff" },
-    portrait: { opacity: 1, ...portrait, y: portrait.y - height },
-    landscape: { opacity: 1, ...landscape, y: landscape.y - height },
+    portrait: { opacity: 1, ...portrait, y: portrait.y-10,height:10 },
+    landscape: { opacity: 1, ...landscape,
+      height:10, 
+      y:invert? landscape.y - height : landscape.y-10 
+    },
   };
 
-  // 🔔 Avanza el índice cuando Card entra al paso 1
+  // Avanza el índice al final del ciclo
   const handleStepChange = useCallback(
     (stepIdx) => {
       if (stepIdx === 4 && elements.length > 0) {
@@ -101,11 +130,28 @@ const StreamMoveVertical = ({
     [elements.length]
   );
 
-  // Pila de todos los elementos montados (sin desmontar)
+  // Pila montada; cada capa centrada
   const renderStack = (items, active) =>
     items.map((el, i) => {
       const isActive = i === active;
       const child = React.isValidElement(el) ? el : <span>{el}</span>;
+
+      // Si es <img/>, le damos contención para no deformar
+      const childIsImg = React.isValidElement(child) && child.type === "img";
+      const preparedChild =
+        childIsImg
+          ? React.cloneElement(child, {
+              style: {
+                ...(child.props?.style || {}),
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                display: "block",
+                margin: "0 auto",
+              },
+              draggable: false,
+            })
+          : child;
 
       return (
         <div
@@ -116,15 +162,22 @@ const StreamMoveVertical = ({
             opacity: isActive ? 1 : 0,
             transition: "opacity 150ms linear",
             pointerEvents: isActive ? "auto" : "none",
-            willChange: "opacity",
             backfaceVisibility: "hidden",
           }}
           data-stack-index={i}
           data-active={isActive ? "1" : "0"}
         >
-          {React.isValidElement(child)
-            ? React.cloneElement(child, { "data-active": isActive ? "1" : "0" })
-            : child}
+          {/* Contenedor de centrado */}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            {preparedChild}
+          </div>
         </div>
       );
     });
@@ -133,24 +186,23 @@ const StreamMoveVertical = ({
     <>
       <Card
         style={styleDefault}
-        portrait={{ ...portrait, animate: animateMoveObject }}
-        landscape={{ ...landscape, animate: animateMoveObject }}
+        portrait={{ ...portrait, animate: animateMoveObject,
+          y:invert?portrait.y-5:portrait.y+5,
+
+         }}
+        landscape={{ ...landscape, animate: animateMoveObject,
+          y:invert?landscape.y-5:landscape.y+5,
+         }}
         loop={true}
         controlsAnimate="play"
         onStepChange={handleStepChange}
       >
-        {/* Wrapper relativo para contener la pila absoluta */}
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {renderStack(elements, index)}
-        </div>
+        {renderStack(elements, index)}
       </Card>
 
-      {/* Opcionales: referencias visuales / elementos externos */}
-      <Card {...configBlankIn} />
       <Card {...configoOuter1} />
       <Card {...configoOuter2} />
-      {/* Si también quieres mantener este, puedes dejarlo: */}
-      {/* <Card {...configBlankOut} /> */}
+      <Card {...configBlankIn} />
     </>
   );
 };

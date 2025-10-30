@@ -1,0 +1,23 @@
+html,body{
+    background:white;
+}
+.text1{
+    font-size: 43px;
+    font-weight: 500;
+    font-family: "default";
+}
+.text2{
+    font-size: 80px;
+    font-style: oblique;
+    font-family: "Dancing_Script";
+    color:#ba9a81;
+    font-weight: 900;
+
+    
+}
+.text_left{
+    text-align: left;
+}
+.text_cursive{
+    font-style: italic;
+}

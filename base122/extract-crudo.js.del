@@ -1,0 +1,144 @@
+#!/usr/bin/env node
+// extract-crudo.mjs
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+let INPUT = process.argv[2];
+if (!INPUT) {
+  const candidate = path.resolve(__dirname, "crudo.html");
+  if (fs.existsSync(candidate)) {
+    INPUT = candidate;
+    console.log("Usando archivo por defecto:", INPUT);
+  } else {
+    console.error("No diste ruta y no existe crudo.html junto al script.");
+    process.exit(1);
+  }
+}
+const OUT_DIR = path.resolve("crudo");
+
+function unescapeJsString(str) {
+  let out = "";
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch !== "\\") { out += ch; continue; }
+    const next = str[++i];
+    if (next === undefined) { out += "\\"; break; }
+    switch (next) {
+      case "n": out += "\n"; break;
+      case "r": out += "\r"; break;
+      case "t": out += "\t"; break;
+      case "b": out += "\b"; break;
+      case "f": out += "\f"; break;
+      case "v": out += "\v"; break;
+      case "\\": out += "\\"; break;
+      case "'": out += "'"; break;
+      case '"': out += '"'; break;
+      case "`": out += "`"; break;
+      case "x": {
+        const hex = str.slice(i + 1, i + 3);
+        if (/^[0-9a-fA-F]{2}$/.test(hex)) { out += String.fromCharCode(parseInt(hex, 16)); i += 2; }
+        else out += "\\x";
+        break;
+      }
+      case "u": {
+        if (str[i + 1] === "{") {
+          const end = str.indexOf("}", i + 2);
+          if (end !== -1) {
+            const code = str.slice(i + 2, end);
+            if (/^[0-9a-fA-F]+$/.test(code)) { out += String.fromCodePoint(parseInt(code, 16)); i = end; }
+            else { out += "\\u{" + code + "}"; i = end; }
+          } else out += "\\u";
+        } else {
+          const hex = str.slice(i + 1, i + 5);
+          if (/^[0-9a-fA-F]{4}$/.test(hex)) { out += String.fromCharCode(parseInt(hex, 16)); i += 4; }
+          else out += "\\u";
+        }
+        break;
+      }
+      default: out += next; break;
+    }
+  }
+  return out;
+}
+const reBacktick = /decompressArrayBuffer\(\s*`([\s\S]*?)`\s*,\s*true\s*\)/g;
+const reQuoted = /decompressArrayBuffer\(\s*(["'])(?:\\[\s\S]|(?!\1)[\s\S])*?\1\s*,\s*true\s*\)/g;
+
+function extractQuotedContent(fullMatch) {
+  const open = fullMatch.indexOf("(");
+  if (open === -1) return null;
+  let i = open + 1;
+  while (/\s/.test(fullMatch[i])) i++;
+  const quote = fullMatch[i];
+  if (quote !== "'" && quote !== '"') return null;
+  i++;
+  let content = "";
+  for (; i < fullMatch.length; i++) {
+    const ch = fullMatch[i];
+    if (ch === "\\") {
+      if (i + 1 < fullMatch.length) { content += "\\" + fullMatch[i + 1]; i++; }
+      else { content += "\\"; }
+    } else if (ch === quote) { break; }
+    else { content += ch; }
+  }
+  return { content };
+}
+
+async function listFilesRecursively(startPath) {
+  const stat = await fsp.stat(startPath);
+  if (stat.isFile()) return [startPath];
+  const out = [];
+  async function walk(dir) {
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) await walk(p);
+      else if (/\.(html?|js|mjs|cjs|ts|tsx)$/.test(e.name)) out.push(p);
+    }
+  }
+  if (stat.isDirectory()) await walk(startPath);
+  return out;
+}
+async function ensureOutDir() { await fsp.mkdir(OUT_DIR, { recursive: true }); }
+async function savePair(baseName, idx, rawText, decodedBytes) {
+  const rawPath = path.join(OUT_DIR, `${baseName}-${idx}.txt`);
+  const binPath = path.join(OUT_DIR, `${baseName}-${idx}.bin`);
+  await fsp.writeFile(rawPath, rawText, { encoding: "latin1" });
+  await fsp.writeFile(binPath, decodedBytes);
+}
+
+async function processFile(filePath) {
+  const src = await fsp.readFile(filePath, "utf8");
+  const base = path.basename(filePath).replace(/\.[^.]+$/, "");
+  let count = 0;
+
+  for (const m of src.matchAll(reBacktick)) {
+    count++;
+    const contentRaw = m[1];
+    const decoded = unescapeJsString(contentRaw);
+    await savePair(base, count, contentRaw, Buffer.from(decoded, "latin1"));
+  }
+  const matches = src.match(reQuoted) || [];
+  for (const full of matches) {
+    const ext = extractQuotedContent(full);
+    if (!ext) continue;
+    count++;
+    const contentRaw = ext.content;
+    const decoded = unescapeJsString(contentRaw);
+    await savePair(base, count, contentRaw, Buffer.from(decoded, "latin1"));
+  }
+  if (count) console.log(`✔ ${filePath}: ${count} literal(es) → crudo/`);
+  return count;
+}
+
+(async () => {
+  await ensureOutDir();
+  const files = await listFilesRecursively(path.resolve(INPUT));
+  let total = 0;
+  for (const f of files) total += await processFile(f);
+  console.log(total ? `Listo. Total: ${total}` : "No se encontraron llamadas.");
+})();

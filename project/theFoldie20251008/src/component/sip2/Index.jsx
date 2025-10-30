@@ -66,10 +66,10 @@ const elementPopUp=[
 
 ]
 const animateCircle=[
-  [{ rotate: 90,scale:0.1 }, 2000],
-  [{ rotate: 90,scale:0.1 }, 2000],
-  [{ rotate: 90,scale:-0.1 }, 2000],
-  [{ rotate: 90,scale:-0.1 }, 2000],
+  [{ rotate: 90,scale:0.1 }, 4000],
+  [{ rotate: 90,scale:0.1 }, 4000],
+  [{ rotate: 90,scale:-0.1 }, 4000],
+  [{ rotate: 90,scale:-0.1 }, 4000],
 ];
 const configCircle={
   style: {

@@ -42,7 +42,7 @@ const Index = () => {
     portrait: {
       x: 50,
       y: 49.5,
-      fontSize: 8,
+      fontSize: 7,
       width: 90,
       height: 50,
       anchor: "middle",
@@ -55,7 +55,7 @@ const Index = () => {
    width: 90,
       height: 50,
       scale: 1,
-      fontSize: 4,
+      fontSize: 3.8,
       anchor: "middle",
     },
   }
@@ -66,10 +66,10 @@ const Index = () => {
   
   ]
   const animateCircle=[
-    [{ rotate: 90,scale:0.1 }, 2000],
-    [{ rotate: 90,scale:0.1 }, 2000],
-    [{ rotate: 90,scale:-0.1 }, 2000],
-    [{ rotate: 90,scale:-0.1 }, 2000],
+    [{ rotate: 90,scale:0.1 },  4000],
+    [{ rotate: 90,scale:0.1 },  4000],
+    [{ rotate: 90,scale:-0.1 }, 4000],
+    [{ rotate: 90,scale:-0.1 }, 4000],
   ];
   const configCircle={
     style: {

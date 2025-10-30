@@ -6,6 +6,9 @@ export const registerOpenOnClick = (url) => {
       mraid.open(url || ""); // si quieres pasarle url aunque esté vacío
       console.log("mraid");
     }
+    else{
+      console.log("no mraid");
+    }
 
     // solo abre ventana si hay url no vacío
     if (url && url.trim() !== "") {

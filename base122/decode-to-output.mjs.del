@@ -1,0 +1,187 @@
+#!/usr/bin/env node
+// decode-to-output.mjs
+// Lee "crudo/*.txt|*.bin", llama a decompressArrayBuffer(input,true) y guarda en "output/" con extensión detectada.
+// Opcional --ffmpeg=/ruta/ffmpeg para convertir desconocidos a WAV.
+
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { spawn } from "node:child_process";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// ---- CLI args ----
+const args = Object.fromEntries(
+  process.argv.slice(2).map(a => {
+    const [k, v] = a.split("=");
+    return [k.replace(/^--/, ""), v ?? true];
+  })
+);
+const decompressorPath = args.decompressor || "./decompressor.mjs";
+const ffmpegPath = args.ffmpeg || null;
+
+const IN_DIR  = path.resolve(__dirname, "crudo");
+const OUT_DIR = path.resolve(__dirname, "output");
+
+// ---- util: asegurar carpeta salida ----
+async function ensureDir(dir) {
+  await fsp.mkdir(dir, { recursive: true });
+}
+
+// ---- cargar módulo con decompressArrayBuffer ----
+async function loadDecompressor(modPath) {
+  const abs = path.isAbsolute(modPath) ? modPath : path.resolve(__dirname, modPath);
+  if (!fs.existsSync(abs)) {
+    console.error(`No existe el módulo decompresor: ${abs}`);
+    process.exit(1);
+  }
+  const mod = await import(pathToFileURL(abs).href);
+  if (typeof mod.decompressArrayBuffer !== "function") {
+    console.error(`El módulo no exporta "decompressArrayBuffer" como función: ${abs}`);
+    process.exit(1);
+  }
+  return mod.decompressArrayBuffer;
+}
+
+// ---- leer entradas de crudo/ ----
+async function listInputs() {
+  if (!fs.existsSync(IN_DIR)) {
+    console.error(`No existe la carpeta de entrada: ${IN_DIR}`);
+    process.exit(1);
+  }
+  const entries = await fsp.readdir(IN_DIR);
+  return entries
+    .filter(n => /\.(txt|bin)$/i.test(n))
+    .map(n => path.join(IN_DIR, n));
+}
+
+// ---- decodificar texto latin1 (para conservar bytes 0..255 del .txt) ----
+function readTextLatin1(buf) {
+  // Node no tiene 'latin1' TextDecoder como tal para strings; usamos Buffer->latin1->string
+  return Buffer.from(buf).toString("latin1");
+}
+
+// ---- detectar tipo por magic bytes ----
+function guessType(u8) {
+  const head = (n) => Array.from(u8.slice(0, n));
+  const h4 = head(4);
+  const h12 = head(12);
+  const asStr = (n) => String.fromCharCode(...u8.slice(0, n));
+
+  // Audio / contenedores
+  if (asStr(4) === "RIFF" && asStr(8).slice(4) === "WAVE") return { ext: "wav", mime: "audio/wav" };
+  if (asStr(3) === "ID3" || (u8[0] === 0xff && (u8[1] & 0xe0) === 0xe0)) return { ext: "mp3", mime: "audio/mpeg" };
+  if (asStr(4) === "OggS") return { ext: "ogg", mime: "audio/ogg" };
+  if (h4[0] === 0x66 && h4[1] === 0x4C && h4[2] === 0x61 && h4[3] === 0x43) return { ext: "flac", mime: "audio/flac" };
+  if (h4[0] === 0x1A && h4[1] === 0x45 && h4[2] === 0xDF && h4[3] === 0xA3) return { ext: "webm", mime: "video/webm" }; // Matroska/WebM
+
+  // Imágenes
+  if (h4[0] === 0x89 && asStr(4).slice(1) === "PNG") return { ext: "png", mime: "image/png" };
+  if (h4[0] === 0xff && h4[1] === 0xd8 && h4[2] === 0xff) return { ext: "jpg", mime: "image/jpeg" };
+  if (asStr(3) === "GIF") return { ext: "gif", mime: "image/gif" };
+
+  // Otros comunes
+  if (asStr(4) === "%PDF") return { ext: "pdf", mime: "application/pdf" };
+  if (asStr(2) === "PK") return { ext: "zip", mime: "application/zip" };
+
+  return { ext: "bin", mime: "application/octet-stream" };
+}
+
+// ---- guardar archivo ----
+async function saveOutput(baseName, idx, u8) {
+  const { ext, mime } = guessType(u8);
+  const safeBase = baseName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const outName = `${safeBase}${idx ? "-" + idx : ""}.${ext}`;
+  const outPath = path.join(OUT_DIR, outName);
+  await fsp.writeFile(outPath, Buffer.from(u8));
+  return { outPath, ext, mime };
+}
+
+// ---- convertir a WAV con ffmpeg (opcional) ----
+async function convertToWavWithFfmpeg(srcPath, dstPath) {
+  return new Promise((resolve, reject) => {
+    const cp = spawn(ffmpegPath, ["-hide_banner", "-y", "-i", srcPath, "-c:a", "pcm_s16le", dstPath], {
+      stdio: "ignore"
+    });
+    cp.on("error", reject);
+    cp.on("close", (code) => code === 0 ? resolve() : reject(new Error(`ffmpeg salió con código ${code}`)));
+  });
+}
+
+// ---- main ----
+(async () => {
+  try {
+    await ensureDir(OUT_DIR);
+    const decompressArrayBuffer = await loadDecompressor(decompressorPath);
+    const inputs = await listInputs();
+    if (inputs.length === 0) {
+      console.log("No hay archivos en crudo/ con extensión .txt o .bin");
+      process.exit(0);
+    }
+
+    let totalOk = 0;
+
+    for (const p of inputs) {
+      const base = path.basename(p).replace(/\.[^.]+$/, "");
+      const buf = await fsp.readFile(p);
+      let inputForDecompress;
+      let note = "";
+
+      if (/\.txt$/i.test(p)) {
+        // texto crudo (latin1) → pásalo tal cual a tu función
+        const text = readTextLatin1(buf);
+        inputForDecompress = text; // tu función esperaba "test" (string)
+        note = "txt→string";
+      } else {
+        // binario → pásalo como Uint8Array por si tu función lo acepta
+        inputForDecompress = new Uint8Array(buf);
+        note = "bin→Uint8Array";
+      }
+
+      // Ejecuta tu función (puede ser sync o async)
+      let out;
+      try {
+        out = await decompressArrayBuffer(inputForDecompress, true);
+      } catch (e) {
+        console.error(`✖ Error descomprimiendo ${p} (${note}):`, e.message);
+        continue;
+      }
+
+      // Normaliza a Uint8Array
+      let u8;
+      if (out instanceof ArrayBuffer) {
+        u8 = new Uint8Array(out);
+      } else if (ArrayBuffer.isView(out)) {
+        u8 = new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
+      } else if (out && typeof out === "object" && "byteLength" in out) {
+        // por si devuelve Buffer
+        u8 = new Uint8Array(Buffer.from(out));
+      } else {
+        console.error(`✖ ${p}: la salida no parece ArrayBuffer/TypedArray/Buffer`);
+        continue;
+      }
+
+      const { outPath, ext, mime } = await saveOutput(base, null, u8);
+      console.log(`✔ ${p} → ${outPath} (${mime})`);
+      totalOk++;
+
+      // Si se pidió ffmpeg y el tipo es desconocido, intenta WAV
+      if (ffmpegPath && !["wav","mp3","ogg","flac"].includes(ext)) {
+        const wavPath = path.join(OUT_DIR, `${base}.wav`);
+        try {
+          await convertToWavWithFfmpeg(outPath, wavPath);
+          console.log(`  ↳ convertido a WAV: ${wavPath}`);
+        } catch (e) {
+          console.warn(`  (ffmpeg) no se pudo convertir a WAV: ${e.message}`);
+        }
+      }
+    }
+
+    console.log(`Listo. Archivos generados en: ${OUT_DIR} (ok: ${totalOk}/${inputs.length})`);
+  } catch (err) {
+    console.error("Error general:", err);
+    process.exit(1);
+  }
+})();

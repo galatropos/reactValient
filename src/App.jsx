@@ -1,4 +1,4 @@
-import Project from "../project/theFoldie20251008/Index";
+import Project from "../project/inkitt20251024/Index";
 import ScaledContainer from "./component/container";
 import  ElementProvider from "./context/ContextElement";
 

@@ -1,4 +1,3 @@
-"use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Card from "./Card";
 
@@ -31,11 +30,13 @@ function useOrientationMode() {
 }
 
 /**
- * - portraitSrc / landscapeSrc (videos)
- * - Dibuja frames en <canvas> (videos ocultos como fuente)
- * - repeat: [triggerMs, targetMs, count]
- * - pause : [triggerMs, durationMs, count] (count opcional; infinito si no se pasa)
- * - velocity: factor de velocidad (1 = normal, 2 = 2x, 0.5 = 0.5x)
+ * Reglas repeat:
+ *  - [ms, "pauseEvent"]
+ *  - [ms, "pauseEvent", callback]
+ *  - [ms, "pauseEvent", durationMs, callback]
+ *  - [triggerMs, targetMs, "next", callback?]
+ *  - [triggerMs, targetMs, count:number, callback?]
+ *  - [triggerMs, targetMs, "end", callback?]
  */
 export default function VideoToFramesPlayer({
   portrait,
@@ -43,10 +44,9 @@ export default function VideoToFramesPlayer({
   landscape,
   landscapeSrc,
   repeat = [],
-  pause = [],
   posterPortrait,
   posterLandscape,
-  objectFit = "cover", // "cover" | "contain"
+  objectFit = "cover",
   autoPlay = true,
   loop = true,
   muted = true,
@@ -54,77 +54,150 @@ export default function VideoToFramesPlayer({
   className,
   style,
   noCard = false,
-  velocity = 1, // 👈 NUEVO: controla la velocidad
+  velocity = 1,
+
+  // 👉 RESET: boolean o token; al activarse, reinicia a 0 y da play
+  reset = false,
+
+  // 👉 PAUSE: boolean o token; al activarse, pausa y mantiene el frame
+  pause = false,
+
+  // API imperativo opcional
+  onApi, // (api) => void
 }) {
   const mode = useOrientationMode();
   const showPortrait = mode === "portrait";
 
-  // Normaliza/clamp de velocidad
+  // Velocidad
   const rateRef = useRef(1);
   rateRef.current = Math.max(0.1, Number.isFinite(+velocity) ? +velocity : 1);
 
-  // videos fuente (ocultos)
+  // Refs video / canvas
   const vPortraitRef = useRef(null);
   const vLandscapeRef = useRef(null);
-
-  // canvas visibles
   const cPortraitRef = useRef(null);
   const cLandscapeRef = useRef(null);
 
-  const shownVideoRef = showPortrait ? vPortraitRef : vLandscapeRef;
-  const hiddenVideoRef = showPortrait ? vLandscapeRef : vPortraitRef;
-  const shownCanvasRef = showPortrait ? cPortraitRef : cLandscapeRef;
+  const shownVideoRef   = showPortrait ? vPortraitRef   : vLandscapeRef;
+  const hiddenVideoRef  = showPortrait ? vLandscapeRef  : vPortraitRef;
+  const shownCanvasRef  = showPortrait ? cPortraitRef   : cLandscapeRef;
 
-  // contenedor para observar tamaño (re-draw inmediato)
+  // Contenedor e interacción
   const containerRef = useRef(null);
+  const userInteractedRef = useRef(false);
 
-  // =======================
-  // repeat en ms
-  // =======================
+  // Reglas
   const rulesInitialRef = useRef([]);
-  const rulesStateRef = useRef([]);
+  const rulesStateRef   = useRef([]);
+  const activeNextRef   = useRef(null);
+
   const resetRuleCounts = () => {
-    rulesStateRef.current = rulesInitialRef.current.map((r) => ({ ...r }));
+    rulesStateRef.current = rulesInitialRef.current.map((r) => ({
+      ...r,
+      remaining: r.remaining,
+      hasFiredCb: false,
+    }));
+    activeNextRef.current = null;
   };
+
   useEffect(() => {
+    const normalizeCallbacks = (cbMaybe) => {
+      if (typeof cbMaybe === "function") return [cbMaybe];
+      if (Array.isArray(cbMaybe)) return cbMaybe.filter((fn) => typeof fn === "function");
+      return [];
+    };
+
+    const normalizeRule = (tuple) => {
+      if (!Array.isArray(tuple) || tuple.length < 2) return null;
+
+      // pauseEvent
+      if (typeof tuple[1] === "string" && tuple[1].toLowerCase() === "pauseevent") {
+        const triggerMs = Math.max(0, Number(tuple[0]) || 0);
+        let durationMs  = 0;
+        let callbacks   = [];
+
+        if (tuple.length === 3) {
+          callbacks = normalizeCallbacks(tuple[2]);
+        } else if (tuple.length >= 4) {
+          durationMs = Math.max(0, Number(tuple[2]) || 0);
+          callbacks  = normalizeCallbacks(tuple[3]);
+        }
+        return {
+          mode: "pauseEvent",
+          triggerMs,
+          durationMs,
+          callbacks,
+          remaining: 1,
+          hasFiredCb: false,
+        };
+      }
+
+      // next / count / end∞
+      const triggerMs = Math.max(0, Number(tuple[0]) || 0);
+      const targetMs  = Math.max(0, Number(tuple[1]) || 0);
+      const ctrl      = tuple[2];
+      const callbacks = normalizeCallbacks(tuple[3]);
+
+      if (typeof ctrl === "string") {
+        const ctrlLow = ctrl.toLowerCase();
+        if (ctrlLow === "next") {
+          return {
+            mode: "next",
+            triggerMs,
+            targetMs,
+            remaining: Number.POSITIVE_INFINITY,
+            callbacks,
+            hasFiredCb: false,
+          };
+        }
+        if (ctrlLow === "end") {
+          return {
+            mode: "end",
+            triggerMs,
+            targetMs,
+            remaining: Number.POSITIVE_INFINITY,
+            callbacks,
+            hasFiredCb: false,
+          };
+        }
+      }
+
+      const n = Number(ctrl);
+      const remaining = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+      return {
+        mode: "count",
+        triggerMs,
+        targetMs,
+        remaining,
+        callbacks,
+        hasFiredCb: false,
+      };
+    };
+
     const rules = (Array.isArray(repeat) ? repeat : [])
-      .map(([tr, tg, c]) => ({
-        triggerMs: Math.max(0, Number(tr) || 0),
-        targetMs: Math.max(0, Number(tg) || 0),
-        remaining: Math.max(0, Number.isFinite(c) ? Math.floor(c) : 0),
-      }))
+      .map(normalizeRule)
+      .filter(Boolean)
       .sort((a, b) => a.triggerMs - b.triggerMs);
+
     rulesInitialRef.current = rules;
     resetRuleCounts();
   }, [repeat]);
 
-  // =======================
-  // pause en ms
-  // =======================
-  const pausesInitialRef = useRef([]);
-  const pausesStateRef = useRef([]);
-  const resetPauseCounts = () => {
-    pausesStateRef.current = pausesInitialRef.current.map((p) => ({
-      ...p,
-      holdEndAt: 0, // performance.now() cuando termina la pausa
-      holdAtMs: 0, // tiempo de video congelado
-    }));
+  // Pausas / holds
+  const pauseEventHoldRef = useRef(null); // { atMs, callbacks? }
+  const tempHoldsRef      = useRef([]);   // [{ holdAtMs, holdEndAt, hasFiredCb, callbacks }]
+
+  const startTempPause = (atMs, durationMs, callbacks = []) => {
+    if (!durationMs) return;
+    const now = performance.now();
+    if (callbacks?.length) for (const fn of callbacks) { try { fn?.(); } catch {} }
+    tempHoldsRef.current.push({
+      holdAtMs: atMs,
+      holdEndAt: now + durationMs,
+      hasFiredCb: true,
+      callbacks,
+    });
   };
-  useEffect(() => {
-    const pauses = (Array.isArray(pause) ? pause : [])
-      .map(([tr, dur, cnt]) => ({
-        triggerMs: Math.max(0, Number(tr) || 0),
-        durationMs: Math.max(0, Number(dur) || 0),
-        remaining: Number.isFinite(cnt)
-          ? Math.max(0, Math.floor(cnt))
-          : Number.POSITIVE_INFINITY,
-        holdEndAt: 0,
-        holdAtMs: 0,
-      }))
-      .sort((a, b) => a.triggerMs - b.triggerMs);
-    pausesInitialRef.current = pauses;
-    resetPauseCounts();
-  }, [pause]);
 
   // estilos
   const canvasStyle = useMemo(
@@ -146,12 +219,17 @@ export default function VideoToFramesPlayer({
       width: "100%",
       height: "100%",
       background: "black",
+      touchAction: "manipulation",
+      WebkitTapHighlightColor: "transparent",
+      userSelect: "none",
+      ...style,
+
     }),
     [style]
   );
 
-  // sincronizar tiempo al rotar + preparar autoplay
-  const prevMsRef = useRef(0); // para detección de wrap por tiempo
+  // sincronizar al rotar + autoplay
+  const prevMsRef = useRef(0);
   useEffect(() => {
     const vShow = shownVideoRef.current;
     const vHide = hiddenVideoRef.current;
@@ -161,89 +239,58 @@ export default function VideoToFramesPlayer({
     const ensureMeta = (vv) =>
       new Promise((res) => {
         if (vv.readyState >= 1) return res();
-        const on = () => {
-          vv.removeEventListener("loadedmetadata", on);
-          res();
-        };
+        const on = () => { vv.removeEventListener("loadedmetadata", on); res(); };
         vv.addEventListener("loadedmetadata", on, { once: true });
       });
 
     ensureMeta(vShow).then(() => {
       try {
         const dur = isFinite(vShow.duration) ? vShow.duration : desired;
-        // -0.001s para evitar quedar en el último frame exacto
         vShow.currentTime = Math.min(desired, Math.max(0, (dur || 0) - 0.001));
       } catch {}
-      try {
-        // Asegura velocidad correcta al rotar
-        vShow.playbackRate = rateRef.current;
-      } catch {}
-      if (autoPlay) {
-        const p = vShow.play?.();
-        p?.catch?.(() => {});
-      }
-      // al rotar, sincroniza "prev" para evitar falsos wraps
+      try { vShow.playbackRate = rateRef.current; } catch {}
+      if (autoPlay) vShow.play?.().catch?.(() => {});
       prevMsRef.current = (desired || 0) * 1000;
     });
   }, [mode, autoPlay]);
 
-  // Aplicar playbackRate cuando cambie velocity (ambos videos)
+  // playbackRate
   useEffect(() => {
     const r = rateRef.current;
-    if (vPortraitRef.current) {
-      try {
-        vPortraitRef.current.playbackRate = r;
-      } catch {}
-    }
-    if (vLandscapeRef.current) {
-      try {
-        vLandscapeRef.current.playbackRate = r;
-      } catch {}
-    }
+    try { if (vPortraitRef.current)  vPortraitRef.current.playbackRate  = r; } catch {}
+    try { if (vLandscapeRef.current) vLandscapeRef.current.playbackRate = r; } catch {}
   }, [velocity]);
 
-  // dibujar frame al canvas con objectFit + HiDPI + ResizeObserver
+  // draw
   const drawToCanvas = (video, canvas) => {
     if (!video || !canvas) return;
-
-    // tamaños CSS actuales
     const cw = canvas.clientWidth;
     const ch = canvas.clientHeight;
     if (!cw || !ch) return;
 
-    // HiDPI
     const dpr = window.devicePixelRatio || 1;
-    const needResize =
-      canvas.width !== Math.floor(cw * dpr) || canvas.height !== Math.floor(ch * dpr);
-    if (needResize) {
+    if (canvas.width !== Math.floor(cw * dpr) || canvas.height !== Math.floor(ch * dpr)) {
       canvas.width = Math.floor(cw * dpr);
       canvas.height = Math.floor(ch * dpr);
     }
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    // Mantener coords en px CSS
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const vw = video.videoWidth || 1;
     const vh = video.videoHeight || 1;
-
-    const scale =
-      objectFit === "contain" ? Math.min(cw / vw, ch / vh) : Math.max(cw / vw, ch / vh);
-
+    const scale = objectFit === "contain" ? Math.min(cw / vw, ch / vh) : Math.max(cw / vw, ch / vh);
     const dw = Math.max(1, Math.floor(vw * scale));
     const dh = Math.max(1, Math.floor(vh * scale));
     const dx = Math.floor((cw - dw) / 2);
     const dy = Math.floor((ch - dh) / 2);
 
     ctx.clearRect(0, 0, cw, ch);
-    try {
-      ctx.drawImage(video, dx, dy, dw, dh);
-    } catch {}
+    try { ctx.drawImage(video, dx, dy, dw, dh); } catch {}
   };
 
-  // Redibujar si cambia tamaño del contenedor
+  // resize observer
   useEffect(() => {
     if (!containerRef.current) return;
     const ro = new ResizeObserver(() => {
@@ -255,16 +302,163 @@ export default function VideoToFramesPlayer({
     return () => ro.disconnect();
   }, [showPortrait, objectFit]);
 
-  // Redibujar si cambias objectFit / orientación
+  // redibujo si cambia objectFit / orientación
   useEffect(() => {
     const v = shownVideoRef.current;
     const c = shownCanvasRef.current;
     if (v && c) drawToCanvas(v, c);
   }, [objectFit, showPortrait]);
 
-  // loop de frames (requestVideoFrameCallback si existe; fallback a RAF)
-  const rafRef = useRef(null);
+  // 👉 RESET: función centralizada
+  const hardResetAndPlay = () => {
+    try {
+      resetRuleCounts();
+      pauseEventHoldRef.current = null;
+      tempHoldsRef.current = [];
+      userInteractedRef.current = false;
+      activeNextRef.current = null;
 
+      if (vPortraitRef.current) vPortraitRef.current.currentTime = 0;
+      if (vLandscapeRef.current) vLandscapeRef.current.currentTime = 0;
+
+      const v = shownVideoRef.current;
+      const c = shownCanvasRef.current;
+      prevMsRef.current = 0;
+
+      if (v) {
+        v.muted = muted;
+        v.playsInline = true;
+        v.playbackRate = rateRef.current;
+        v.play?.().catch?.(() => {});
+      }
+      if (v && c) drawToCanvas(v, c);
+    } catch {}
+  };
+
+  // 🔔 Disparar reset por prop `reset`
+  const lastResetRef = useRef(undefined);
+  useEffect(() => {
+    const val = reset;
+    const changed =
+      (typeof val === "boolean" && val === true && lastResetRef.current !== true) ||
+      (typeof val === "number" && val !== lastResetRef.current) ||
+      (typeof val === "string" && val !== lastResetRef.current);
+
+    if (changed) {
+      hardResetAndPlay();
+    }
+    lastResetRef.current = val;
+  }, [reset]);
+
+  // 👉 PAUSE: efecto que pausa cuando `pause` se activa / cambia
+  const lastPauseRef = useRef(undefined);
+  useEffect(() => {
+    const val = pause;
+    const changed =
+      (typeof val === "boolean" && val === true && lastPauseRef.current !== true) ||
+      (typeof val === "number" && val !== lastPauseRef.current) ||
+      (typeof val === "string" && val !== lastPauseRef.current);
+
+    if (changed) {
+      const v = shownVideoRef.current;
+      const c = shownCanvasRef.current;
+      try { v?.pause?.(); } catch {}
+      if (v && c) drawToCanvas(v, c); // asegurar frame visible
+    }
+    lastPauseRef.current = val;
+  }, [pause, showPortrait]); // si cambia de orientación, mantenemos el frame pausado
+
+  // 🧰 API imperativo
+  useEffect(() => {
+    if (typeof onApi !== "function") return;
+    const api = {
+      reset: hardResetAndPlay,
+      play: () => shownVideoRef.current?.play?.(),
+      pause: () => shownVideoRef.current?.pause?.(),
+      seekMs: (ms) => {
+        const v = shownVideoRef.current;
+        const c = shownCanvasRef.current;
+        const m = Math.max(0, Number(ms) || 0);
+        try { if (v) v.currentTime = m / 1000; } catch {}
+        prevMsRef.current = m;
+        if (v && c) drawToCanvas(v, c);
+      },
+    };
+    onApi(api);
+  }, [onApi, showPortrait]);
+
+  // interacción (sin reset/pause por click)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let lastStamp = -1;
+    const onPrimaryDown = (e) => {
+      try { e.preventDefault(); } catch {}
+      try { e.stopPropagation(); } catch {}
+
+      const ts = e.timeStamp ?? performance.now();
+      if (ts === lastStamp) return;
+      lastStamp = ts;
+
+      // liberar pauseEvent infinito si existe
+      if (pauseEventHoldRef.current) {
+        const hold = pauseEventHoldRef.current;
+        if (Array.isArray(hold.callbacks)) {
+          for (const fn of hold.callbacks) { try { fn?.(); } catch {} }
+        }
+        pauseEventHoldRef.current = null;
+        return;
+      }
+
+      // si estamos en tramo END => callback inmediato
+      const v = shownVideoRef.current;
+      const tMs = (v?.currentTime || 0) * 1000;
+      const EPS = 0.75;
+      const rEnd = rulesStateRef.current.find(
+        (r) =>
+          r.mode === "end" &&
+          tMs + EPS >= Math.min(r.targetMs, r.triggerMs) &&
+          tMs - EPS <  Math.max(r.targetMs, r.triggerMs)
+      );
+      if (rEnd && Array.isArray(rEnd.callbacks)) {
+        for (const fn of rEnd.callbacks) { try { fn?.(); } catch {} }
+        return;
+      }
+
+      // marcar interacción para NEXT
+      userInteractedRef.current = true;
+    };
+
+    let remove = () => {};
+    if ("onpointerdown" in window) {
+      el.addEventListener("pointerdown", onPrimaryDown, { passive: false, capture: true });
+      remove = () => el.removeEventListener("pointerdown", onPrimaryDown, { capture: true });
+    } else if ("ontouchstart" in window) {
+      el.addEventListener("touchstart", onPrimaryDown, { passive: false, capture: true });
+      remove = () => el.removeEventListener("touchstart", onPrimaryDown, { capture: true });
+    } else {
+      el.addEventListener("mousedown", onPrimaryDown, { passive: false, capture: true });
+      remove = () => el.removeEventListener("mousedown", onPrimaryDown, { capture: true });
+    }
+
+    return remove;
+  }, []);
+
+  // lock tras seek
+  const seekLockRef = useRef(false);
+  const seekLockUntilRef = useRef(0);
+
+  const runCallbacksOnce = (r) => {
+    if (!r || r.hasFiredCb) return;
+    if (Array.isArray(r.callbacks) && r.callbacks.length) {
+      for (const fn of r.callbacks) { try { fn?.(); } catch {} }
+    }
+    r.hasFiredCb = true;
+  };
+
+  // loop principal
+  const rafRef = useRef(null);
   useEffect(() => {
     const v = shownVideoRef.current;
     const canvas = shownCanvasRef.current;
@@ -273,82 +467,161 @@ export default function VideoToFramesPlayer({
     let stopped = false;
     const hasRVFC = typeof v.requestVideoFrameCallback === "function";
 
-    // intentar autoplay silencioso y setear velocidad
     const tryPlay = async () => {
       try {
         v.muted = muted;
         v.playsInline = true;
-        v.playbackRate = rateRef.current; // 👈 aplica velocidad
+        v.playbackRate = rateRef.current;
         if (autoPlay) await v.play();
-      } catch {
-        // si no deja, avanzaremos manualmente el currentTime en el fallback
-      }
+      } catch {}
     };
     tryPlay();
 
-    // Detección de LOOP NATIVO por tiempo: near end → near start
     const detectAndResetOnWrap = (tMs) => {
       if (!loop) return;
       const durSec = isFinite(v.duration) ? v.duration : NaN;
-      const durMs = isFinite(durSec) ? durSec * 1000 : NaN;
+      const durMs  = isFinite(durSec) ? durSec * 1000 : NaN;
       if (!isFinite(durMs)) return;
-
       const prev = prevMsRef.current;
-      const nearStart = tMs < 250; // ~0.25s
-      const nearEnd = prev > durMs - 400; // últimas ~0.4s
-      const wrapped = prev > tMs + 100 && nearStart && nearEnd;
+      const nearStart = tMs < 250;
+      const nearEnd   = prev > durMs - 400;
+      const wrapped   = prev > tMs + 100 && nearStart && nearEnd;
       if (wrapped) {
-        resetRuleCounts(); // reinicia repeat
-        resetPauseCounts(); // reinicia pause
+        rulesInitialRef.current && resetRuleCounts();
+        pauseEventHoldRef.current = null;
+        tempHoldsRef.current = [];
       }
     };
 
+    const consumeUserInteraction = () => {
+      if (!userInteractedRef.current) return false;
+      userInteractedRef.current = false;
+
+      const tMsNow = (v.currentTime || 0) * 1000;
+
+      const rActive = activeNextRef.current;
+      if (rActive && rActive.mode === "next" && rActive.remaining > 0) {
+        rActive.remaining = 0;
+        try { v.currentTime = (rActive.triggerMs || 0) / 1000; } catch {}
+        prevMsRef.current = rActive.triggerMs || 0;
+        runCallbacksOnce(rActive);
+        activeNextRef.current = null;
+        seekLockRef.current = true;
+        seekLockUntilRef.current = performance.now() + 16;
+        return true;
+      }
+
+      let candidate = null;
+      for (const r of rulesStateRef.current) {
+        if (r.mode !== "next" || r.remaining <= 0) continue;
+        if (r.triggerMs >= tMsNow) {
+          if (!candidate || r.triggerMs < candidate.triggerMs) candidate = r;
+        }
+      }
+      if (candidate) {
+        candidate.remaining = 0;
+        try { v.currentTime = (candidate.triggerMs || 0) / 1000; } catch {}
+        prevMsRef.current = candidate.triggerMs || 0;
+        runCallbacksOnce(candidate);
+        seekLockRef.current = true;
+        seekLockUntilRef.current = performance.now() + 16;
+        return true;
+      }
+      return false;
+    };
+
     const handleProgressAndDraw = () => {
-      const tMs = (v.currentTime || 0) * 1000;
-
-      // Detecta wrap y resetea reglas
-      detectAndResetOnWrap(tMs);
-
-      // ---- PAUSE (con RVFC) ----
-      const now = performance.now();
-      const activeHold = pausesStateRef.current.find((p) => p.holdEndAt > now);
-      if (activeHold) {
-        const holdSec = (activeHold.holdAtMs || 0) / 1000;
-        try {
-          v.currentTime = holdSec;
-        } catch {}
-        prevMsRef.current = activeHold.holdAtMs || tMs;
+      if (seekLockRef.current) {
+        if (performance.now() >= seekLockUntilRef.current) seekLockRef.current = false;
         drawToCanvas(v, canvas);
         return;
       }
-      // ¿cruce del trigger?
+
+      const tMs = (v.currentTime || 0) * 1000;
+      detectAndResetOnWrap(tMs);
+
+      const now = performance.now();
+
+      // limpiar pausas temporales expiradas
+      if (tempHoldsRef.current.length) {
+        tempHoldsRef.current = tempHoldsRef.current.filter((p) => now < p.holdEndAt);
+      }
+
+      // pauseEvent hold infinito
+      if (pauseEventHoldRef.current) {
+        const holdMs = pauseEventHoldRef.current.atMs || 0;
+        try { v.currentTime = holdMs / 1000; } catch {}
+        prevMsRef.current = holdMs;
+        drawToCanvas(v, canvas);
+        return;
+      }
+
+      // pausa temporal activa
+      const tempHold = tempHoldsRef.current.find((p) => p.holdEndAt > now);
+      if (tempHold) {
+        const holdSec = (tempHold.holdAtMs || 0) / 1000;
+        try { v.currentTime = holdSec; } catch {}
+        prevMsRef.current = tempHold.holdAtMs || tMs;
+        drawToCanvas(v, canvas);
+        return;
+      }
+
+      // interacción para NEXT
+      const jumped = consumeUserInteraction();
+      if (jumped) {
+        drawToCanvas(v, canvas);
+        return;
+      }
+
+      // pauseEvent (crea hold)
       const prev = prevMsRef.current;
-      for (const p of pausesStateRef.current) {
-        if (p.remaining <= 0 || p.durationMs <= 0) continue;
-        if (prev < p.triggerMs && tMs >= p.triggerMs) {
-          p.holdAtMs = p.triggerMs;
-          p.holdEndAt = now + p.durationMs; // duración en tiempo real (independiente de velocity)
-          p.remaining -= 1;
-          try {
-            v.currentTime = p.triggerMs / 1000;
-          } catch {}
-          prevMsRef.current = p.triggerMs;
-          drawToCanvas(v, canvas);
-          return;
+      for (const r of rulesStateRef.current) {
+        if (r.mode !== "pauseEvent" || r.remaining <= 0) continue;
+        if (prev < r.triggerMs && tMs >= r.triggerMs) {
+          r.remaining = 0;
+          if (!r.durationMs || r.durationMs <= 0) {
+            pauseEventHoldRef.current = { atMs: r.triggerMs, callbacks: r.callbacks || [] };
+            try { v.currentTime = (r.triggerMs || 0) / 1000; } catch {}
+            prevMsRef.current = r.triggerMs;
+            drawToCanvas(v, canvas);
+            return;
+          } else {
+            startTempPause(r.triggerMs, r.durationMs, r.callbacks);
+            try { v.currentTime = (r.triggerMs || 0) / 1000; } catch {}
+            prevMsRef.current = r.triggerMs;
+            drawToCanvas(v, canvas);
+            return;
+          }
         }
       }
 
-      // ---- REPEAT (con RVFC) ----
+      // REPEAT (next / count / end∞)
       for (const r of rulesStateRef.current) {
         if (r.remaining <= 0) continue;
-        if (prev < r.triggerMs && tMs >= r.triggerMs) {
-          try {
-            v.currentTime = r.targetMs / 1000;
-          } catch {}
-          r.remaining -= 1;
-          prevMsRef.current = r.targetMs;
-          drawToCanvas(v, canvas);
-          return;
+
+        if (r.mode === "next") {
+          if (prev < r.triggerMs && tMs >= r.triggerMs) {
+            try { v.currentTime = r.targetMs / 1000; } catch {}
+            activeNextRef.current = r;
+            prevMsRef.current = r.targetMs;
+            drawToCanvas(v, canvas);
+            return;
+          }
+        } else if (r.mode === "count") {
+          if (prev < r.triggerMs && tMs >= r.triggerMs) {
+            try { v.currentTime = r.targetMs / 1000; } catch {}
+            r.remaining -= 1;
+            prevMsRef.current = r.targetMs;
+            drawToCanvas(v, canvas);
+            return;
+          }
+        } else if (r.mode === "end") {
+          if (prev < r.triggerMs && tMs >= r.triggerMs) {
+            try { v.currentTime = r.targetMs / 1000; } catch {}
+            prevMsRef.current = r.targetMs;
+            drawToCanvas(v, canvas);
+            return;
+          }
         }
       }
 
@@ -357,103 +630,136 @@ export default function VideoToFramesPlayer({
     };
 
     if (hasRVFC) {
-      // Camino con requestVideoFrameCallback
       const cb = () => {
         if (stopped) return;
-        // Mantener playbackRate si velocity cambia on-the-fly
-        try {
-          v.playbackRate = rateRef.current;
-        } catch {}
+        try { v.playbackRate = rateRef.current; } catch {}
         handleProgressAndDraw();
         v.requestVideoFrameCallback(cb);
       };
       v.requestVideoFrameCallback(cb);
-      return () => {
-        stopped = true;
-      };
+      return () => { stopped = true; };
     }
 
-    // Fallback RAF: si autoplay falla, avanzamos currentTime manualmente
+    // Fallback RAF
     let lastTs = null;
     const tick = (ts) => {
       if (stopped) return;
 
       if (autoPlay && !v.paused && !v.ended) {
-        // Reproduciendo normal
-        try {
-          v.playbackRate = rateRef.current;
-        } catch {}
-        handleProgressAndDraw();
-      } else {
-        // Autoplay bloqueado: "seeking-driven"
+        try { v.playbackRate = rateRef.current; } catch {}
+
+        const now = performance.now();
+        tempHoldsRef.current = tempHoldsRef.current.filter((p) => now < p.holdEndAt);
+
+        if (pauseEventHoldRef.current) {
+          try { v.currentTime = (pauseEventHoldRef.current.atMs || 0) / 1000; } catch {}
+          drawToCanvas(v, canvas);
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        const tHold = tempHoldsRef.current.find((p) => p.holdEndAt > now);
+        if (tHold) {
+          try { v.currentTime = (tHold.holdAtMs || 0) / 1000; } catch {}
+          drawToCanvas(v, canvas);
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        if (seekLockRef.current) {
+          if (performance.now() >= seekLockUntilRef.current) seekLockRef.current = false;
+          drawToCanvas(v, canvas);
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
         if (lastTs == null) lastTs = ts;
-        const delta = ts - lastTs;
+        let next = (v.currentTime || 0) + ((ts - lastTs) / 1000) * rateRef.current;
         lastTs = ts;
 
-        const dur = isFinite(v.duration) ? v.duration : 0;
-        if (dur > 0) {
-          const inc = (delta / 1000) * rateRef.current; // 👈 acelera/ralentiza
-          let next = (v.currentTime || 0) + inc;
+        const nextMs = next * 1000;
+        const prev = prevMsRef.current;
 
-          // ---- PAUSE en RAF ----
-          const now = performance.now();
-          const activeHold = pausesStateRef.current.find((p) => p.holdEndAt > now);
-          if (activeHold) {
-            next = (activeHold.holdAtMs || 0) / 1000;
-          } else {
-            const nextMs = next * 1000;
-            const prev = prevMsRef.current;
-            let startedHold = false;
-            for (const p of pausesStateRef.current) {
-              if (p.remaining <= 0 || p.durationMs <= 0) continue;
-              if (prev < p.triggerMs && nextMs >= p.triggerMs) {
-                p.holdAtMs = p.triggerMs;
-                p.holdEndAt = now + p.durationMs; // tiempo real
-                p.remaining -= 1;
-                next = p.triggerMs / 1000;
-                prevMsRef.current = p.triggerMs;
-                startedHold = true;
-                break;
-              }
+        // pauseEvent
+        for (const r of rulesStateRef.current) {
+          if (r.mode !== "pauseEvent" || r.remaining <= 0) continue;
+          if (prev < r.triggerMs && nextMs >= r.triggerMs) {
+            r.remaining = 0;
+            if (!r.durationMs || r.durationMs <= 0) {
+              pauseEventHoldRef.current = { atMs: r.triggerMs, callbacks: r.callbacks || [] };
+              next = r.triggerMs / 1000;
+              prevMsRef.current = r.triggerMs;
+            } else {
+              startTempPause(r.triggerMs, r.durationMs, r.callbacks);
+              next = r.triggerMs / 1000;
+              prevMsRef.current = r.triggerMs;
             }
-            if (!startedHold) {
-              // ---- REPEAT en RAF (solo si no inició hold)
-              const prev2 = prevMsRef.current;
-              let jumped = false;
-              for (const r of rulesStateRef.current) {
-                if (r.remaining <= 0) continue;
-                if (prev2 < r.triggerMs && nextMs >= r.triggerMs) {
-                  next = r.targetMs / 1000;
-                  r.remaining -= 1;
-                  prevMsRef.current = r.targetMs;
-                  jumped = true;
-                  break;
-                }
-              }
-              if (!jumped) prevMsRef.current = nextMs;
-            }
+            break;
           }
-
-          // envolver / límites
-          if (loop) {
-            if (next >= dur) {
-              next = 0;
-              resetRuleCounts();
-              resetPauseCounts();
-            }
-          } else {
-            if (next >= dur) next = Math.max(0, dur - 0.001);
-          }
-
-          try {
-            v.currentTime = next;
-          } catch {}
         }
+
+        // REPEAT (next / count / end∞)
+        let jumpedRepeat = false;
+        for (const r of rulesStateRef.current) {
+          if (r.remaining <= 0) continue;
+
+          if (r.mode === "next") {
+            if (prev < r.triggerMs && nextMs >= r.triggerMs) {
+              next = r.targetMs / 1000;
+              activeNextRef.current = r;
+              prevMsRef.current = r.targetMs;
+              jumpedRepeat = true;
+              break;
+            }
+          } else if (r.mode === "count") {
+            if (prev < r.triggerMs && nextMs >= r.triggerMs) {
+              next = r.targetMs / 1000;
+              r.remaining -= 1;
+              prevMsRef.current = r.targetMs;
+              jumpedRepeat = true;
+              break;
+            }
+          } else if (r.mode === "end") {
+            if (prev < r.triggerMs && nextMs >= r.triggerMs) {
+              next = r.targetMs / 1000; // 11400 → 10100...
+              prevMsRef.current = r.targetMs;
+              jumpedRepeat = true;
+              break;
+            }
+          }
+        }
+        if (!jumpedRepeat) prevMsRef.current = nextMs;
+
+        // envolver normal
+        const dur = isFinite(v.duration) ? v.duration : 0;
+        if (loop) {
+          if (next >= dur) {
+            next = 0;
+            resetRuleCounts();
+            pauseEventHoldRef.current = null;
+            tempHoldsRef.current = [];
+          }
+        } else if (!loop) {
+          if (dur > 0 && next >= dur) next = Math.max(0, dur - 0.001);
+        }
+
+        try { v.currentTime = next; } catch {}
+        drawToCanvas(v, canvas);
+      } else {
         drawToCanvas(v, canvas);
       }
-
       rafRef.current = requestAnimationFrame(tick);
     };
+
+    if (hasRVFC) {
+      const cb = () => {
+        if (stopped) return;
+        try { v.playbackRate = rateRef.current; } catch {}
+        handleProgressAndDraw();
+        v.requestVideoFrameCallback(cb);
+      };
+      v.requestVideoFrameCallback(cb);
+      return () => { stopped = true; };
+    }
 
     rafRef.current = requestAnimationFrame(tick);
     return () => {
@@ -462,7 +768,7 @@ export default function VideoToFramesPlayer({
     };
   }, [showPortrait, autoPlay, loop, muted, objectFit, velocity]);
 
-  // redibujo extra al resize de ventana (por si el editor no usa ResizeObserver)
+  // redibujo extra al resize
   useEffect(() => {
     const onResize = () => {
       const v = shownVideoRef.current;
@@ -517,7 +823,6 @@ export default function VideoToFramesPlayer({
     );
   }
 
-  // En modo Card, el Card controla tamaño; usamos un wrapper interno para observar redimensionados
   return (
     <Card
       className={className}
@@ -527,7 +832,7 @@ export default function VideoToFramesPlayer({
       controlsAnimate="play"
       loop={true}
     >
-      <div style={{ position: "relative", width: "100%", height: "100%" }} ref={containerRef}>
+      <div style={{ position: "relative", width: "100%", height: "100%",...style }} ref={containerRef}>
         {content}
       </div>
     </Card>

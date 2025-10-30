@@ -2,10 +2,11 @@ import React from 'react'
 import animatePulse from '../utils/animatePulse';
 import Card from '../../../../src/component/Card';
 
-const CTA = ({xLandscape,yLandscape,xPortrait,yPortrait}) => {
+const CTA = ({xLandscape,yLandscape,xPortrait,yPortrait,scale=1}) => {
 
   const configCta = {
     style: {
+      scale,
       backgroundSize: "contain",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",

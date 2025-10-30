@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { Children, useEffect, useState } from 'react'
 import Card from '../../../../../src/component/Card'
 import imageLogotipo from '../../../assets/image/logo.webp'
 import PopScale from '../../../../../src/component/effects/pop/PopScale'
@@ -17,21 +17,23 @@ import imageCel2 from '../../../assets/image/image3/2-top.webp'
 import imageCel3 from '../../../assets/image/image3/3-top.webp'
 import imageCel4 from '../../../assets/image/image3/4-top.webp'
 import imageCel5 from '../../../assets/image/image3/5-top.webp'
-import imageFront1 from '../../../assets/image/image3/1-brand.webp'
-import imageFront2 from '../../../assets/image/image3/2-brand.webp'
-import imageFront3 from '../../../assets/image/image3/3-brand.webp'
-import imageFront4 from '../../../assets/image/image3/4-brand.webp'  
-import imageFront5 from '../../../assets/image/image3/5-brand.webp'
+import imageFront1 from '../../../assets/image/image3/1-cel.webp'
+import imageFront2 from '../../../assets/image/image3/2-cel.webp'
+import imageFront3 from '../../../assets/image/image3/3-cel.webp'
+import imageFront4 from '../../../assets/image/image3/4-cel.webp'  
+import imageFront5 from '../../../assets/image/image3/5-cel.webp'
 import StreamMoveVertical from '../../../../../src/component/effects/stream/StreamMoveVertical'
 import StreamOpacityX from '../../../../../src/component/effects/stream/StreamOpacityX'
 import CTA from '../CTA'
 
 const image1 = [imagetop1,   imagetop2,   imagetop3,   imagetop4,   imagetop5];
 const image2 = [imagebrand1, imagebrand2, imagebrand3, imagebrand4, imagebrand5];
-const image3 = [imageCel1,   imageCel2,   imageCel3,   imageCel4,   imageCel5];
-const image4 = [imageFront1, imageFront2, imageFront3, imageFront4, imageFront5];
-const imagesStreams = ({array = {},rotate=0,width=500,height=500}) =>
+const image4 = [imageCel1,   imageCel2,   imageCel3,   imageCel4,   imageCel5];
+const image3 = [imageFront1, imageFront2, imageFront3, imageFront4, imageFront5];
+const imagesStreams = ({array = {},rotate=0,width=500,height=500,x,y}) =>
   array.map((src, i) => (
+   
+
     <img
       key={i}
       src={src}
@@ -39,19 +41,16 @@ const imagesStreams = ({array = {},rotate=0,width=500,height=500}) =>
       loading="eager"
       decoding="async"
       style={{
+        
         width,              // tamaño REAL en PX (no porcentual)
         height,
         transform:`rotate(${rotate}deg)`,
       }}
-    />
+      />
   ));
 
 const Index = () => {
-  const [hidden,setHidden]=useState(false)
 
-    useEffect(() => {
-       setTimeout(() =>setHidden(true), 500);
-  },[]);
   
   const configLogotipo = {
     style: {
@@ -61,18 +60,18 @@ const Index = () => {
       backgroundRepeat: "no-repeat",
     },
     portrait: {
-      x: 30,
-      y: 42,
-      width: 48,
-      height: 10,
+      x: 18,
+      y: 43,
+      width: 25,
+      height: 9,
       anchor: "middle",
       rotate: 0,
       scale: 1,
     },
     landscape: {
-      x: 80,
+      x: 65,
       y: 1,
-      width: 20,
+      width: 15,
       height: 16,
       anchor: "top",
     },
@@ -84,26 +83,28 @@ const Index = () => {
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       fontWeight: "bold",
+      textAlign:"left",
     },
     portrait: {
-      x: 30,
-      y: 51,
-      width: 50,
-      fontSize:4.5,
+      x: 5,
+      y: 54,
+      width: 40,
+      fontSize:8,
       height: 10,
-      anchor: "middle",
+      anchor: "left",
       rotate: 0,
       scale: 1,
     },
     landscape: {
-      x: 80,
+      x: 52,
       y: 23,
-      width: 40,
+      width: 50,
       scale: 1,
       height: 60,
-      anchor: "middle",
-      fontSize:2.8
+      anchor: "left",
+      fontSize:5
     },
+    children:"Buy 1, Get 1 Free!"
   };
 
 
@@ -119,19 +120,19 @@ const Index = () => {
     },
     portrait: {
       x: 50,
-      y: 7,
+      y: 8,
       rotate: 0,
       scale: 1,
-      width: 102,
+      width: 95,
       anchor: "top",
-      height: 25,
+      height: 29.5,
       
     },
     landscape: {
-      x: 25,
-      y: -4,
-      width: 54,
-      height: 42,
+      x: 29,
+      y: 2,
+      width: 53,
+      height: 50,
       anchor: "top",
     },
   };
@@ -140,21 +141,21 @@ const Index = () => {
 
     },
     portrait: {
-      x: 105,
+      x: 101,
       y: 50,
       anchor: "right",
       rotate: 0,
       scale: 1,
-      width: 50,
-      height: 30,
+      width: 55,
+      height: 20,
       opacity:1,
     },
     landscape: {
       opacity:1,
       x: 55,
-      y: 85,
+      y: 89,
       width: 30,
-      height: 50,
+      height: 34,
       anchor: "right-bottom",
     },
   };
@@ -162,48 +163,47 @@ const Index = () => {
     style: {
       background: "#F1F1F1",
 
-
     },
     portrait: {
       
-      x: 60,
-      y: 70,
+      x: 72.5,
+      y:62,
       rotate: 0,
       scale: 1,
-      width: 40,
-      height: 30,
+      width: 50,
+      height: 34,
+      anchor:"top"
     },
     landscape: {
-      x: 78,
+      x: 80,
       y:95,
-      width: 45,
-      height: 50,
+      width: 35,
+      height: 43,
       anchor:"bottom"
     },
   };
   const configCard4 = {
     style: {
-      overflow: "hidden",
 
     },
     portrait: {
 
-      x: 0,
+      x: -5,
       y: 84,
       anchor: "left",
       rotate: 0,
       scale: 1,
-      width: 50,
+      width: 55,
       height: 30,
       opacity:1,
 
     },
     landscape: {
-      x: 17,
-      y: 85,
+      x: 28,
+      y: 90,
       opacity:1,
-      width: 20,
-      height: 45,
+      width: 25,
+      height: 41,
       anchor: "right-bottom",
     },
   };
@@ -213,10 +213,10 @@ const configLine={
     borderBottom: "5px solid black",
   },
   portrait: {
-    x: 0,
+    x: 2.5,
     y: 0,
     height: 4,
-    width: 68,
+    width: 73,
     anchor: "left-top",
   },
   landscape: {
@@ -235,10 +235,10 @@ const configLogo2 = {
     backgroundRepeat: "no-repeat",
   },
   portrait: {
-    x: 98,
-    y: -1,
-    width: 30,
-    height: 10,
+    x: 97,
+    y: -2.5,
+    width: 20,
+    height: 11,
     anchor: "right-top",
     rotate: 0,
     scale: 1,
@@ -255,19 +255,21 @@ const configLogo2 = {
   return (
     <>
       {/* 👇 Llamada ajustada: fitHeight + widthAuto. No pasamos itemsPerView. */}
-      <StreamMoveVertical key={"stream3"} invert={true}   {...configCard3} elements={imagesStreams({array:image2,height:400,width:400})}         />
+      <StreamMoveVertical key={"stream3"} invert={true}   {...configCard3} elements={imagesStreams({array:image2,height:440,width:450,})}         />
       <StreamMoveVertical key={"stream1"}  {...configCard1}elements={imagesStreams({array:image1,rotate:40,height:389,width:400})} />
-      <StreamOpacityX key={"stream2"}      {...configCard2} elements={imagesStreams({array:image3,height:490})}                              />
-      <StreamOpacityX key={"stream4"} invert={true}     {...configCard4} elements={imagesStreams({array:image4})}                  />
+      <StreamOpacityX key={"stream2"}      {...configCard2} elements={imagesStreams({array:image3,height:390, width:390})}                              />
+      <StreamOpacityX key={"stream4"} invert={true}     {...configCard4} elements={imagesStreams({array:image4,width:400, height:394})}                  />
 
 
 
-      <PopScale {...configPopUp} elements={elementPopUp} intervalChange={4000} scale={0.8} />
+      <Card {...configPopUp} elements={elementPopUp} intervalChange={4000} scale={0.8}  />
       <Card {...configLogotipo} />
-      <CTA xLandscape={80} yLandscape={37} xPortrait={30} yPortrait={64}/>
+      <CTA xLandscape={67} yLandscape={37} xPortrait={23} yPortrait={69} scale={0.8}/>
 
     <Card {...configLine}/>
     <Card {...configLogo2}/>
+
+    
 
 
     </>

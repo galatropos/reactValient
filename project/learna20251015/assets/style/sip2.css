@@ -1,0 +1,22 @@
+html,body{
+    background: white;
+}
+
+.progress {
+    appearance: none;
+    width: 98%;
+    height: 98%;
+  }
+  
+  /* Fondo del progress (track) */
+  .progress::-webkit-progress-bar {
+    background: #DCDCDC; /* fondo gris claro */
+    border-radius:990px;
+  }
+  
+  /* Barrita de progreso (relleno) */
+  .progress::-webkit-progress-value {
+    background: #54A1F8; /* tu azul */
+    border-radius:100%;
+  }
+  

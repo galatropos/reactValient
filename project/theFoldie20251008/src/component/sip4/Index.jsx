@@ -130,7 +130,7 @@ const Index = () => {
       width: 90,
       height: 50,
       scale: 1,
-      fontSize: 3.3,
+      fontSize: 3,
       anchor: "middle",
     },
   };
@@ -220,7 +220,7 @@ const Index = () => {
 
 
       <Card {...configBoard} />
-      <PopScale {...configPopUp} elements={elementPopUp} intervalChange={8000} scale={0.8} />
+      <PopScale {...configPopUp} elements={elementPopUp} intervalChange={3000} scale={0.8} />
       <Card {...configLogotipo} />
       <CTA xLandscape={50} yLandscape={69} xPortrait={50} yPortrait={64}/>
  

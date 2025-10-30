@@ -11,9 +11,9 @@ const StreamOpacityX = ({
   elements = [],
   invert=false,
     cycleDelay=300 , 
-    durationIn=500,
-    durationOut=400,               
-    hold=5500,    
+    durationIn=800,
+    durationOut=600,               
+    hold=5000,    
 }) => {
   const [index, setIndex] = useState(0);
 const orientation = useOrientation();
@@ -33,12 +33,12 @@ const orientation = useOrientation();
   // ▶️ Secuencia “sensor”
   // Cambiamos el elemento al entrar al paso 1
   const animateMoveObject1 = [
-    [{x: -x*2 }, 0],                // 0 (instantáneo)
-    [{ x: x }, durationIn/2],                // 0 (instantáneo)
-    [{ x: x, opacity:1 }, durationIn/2],                // 0 (instantáneo)
+    [{x: -x }, 0],                // 0 (instantáneo)
+    [{ x: x/2, opacity:1 }, durationIn/2],                // 0 (instantáneo)
+    [{ x: x/2, opacity:0 }, durationIn/2],                // 0 (instantáneo)
     [{}, hold],             // 2
-    [{ x: x }, durationOut/2],                // 0 (instantáneo)
-    [{ x: x, opacity:-1 }, durationOut/2],                // 0 (instantáneo)
+    [{ x: x/2,opacity:-1 }, durationOut/2],                // 0 (instantáneo)
+    [{ x: x/2, opacity:0 }, durationOut/2],                // 0 (instantáneo)
     [{}, cycleDelay],             // 2
       
   ];

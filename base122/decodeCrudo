@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+// decodeCrudo.mjs
+// Copia todos los .bin desde una carpeta "crudo" hacia "output".
+// - Conserva nombres.
+// - Evita sobrescribir (agrega sufijos -1, -2, ...).
+//
+// Uso CLI:
+//   node decodeCrudo.mjs                 # ./crudo → ./output
+//   node decodeCrudo.mjs <dirCrudo> <dirOutput>
+
+import fs from "node:fs";
+import path from "node:path";
+
+function ensureDir(p) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
+function uniquePath(dir, baseName) {
+  let target = path.join(dir, baseName);
+  if (!fs.existsSync(target)) return target;
+  const { name, ext } = path.parse(baseName);
+  let k = 1;
+  for (;;) {
+    const cand = path.join(dir, `${name}-${k}${ext}`);
+    if (!fs.existsSync(cand)) return cand;
+    k++;
+  }
+}
+
+/**
+ * Copia .bin desde `crudoDir` hacia `outDir`.
+ * @param {string} crudoDir
+ * @param {string} outDir
+ * @returns {number} cantidad copiada
+ */
+export function decodeCrudo(crudoDir = "crudo", outDir = "output") {
+  ensureDir(outDir);
+
+  if (!fs.existsSync(crudoDir) || !fs.statSync(crudoDir).isDirectory()) {
+    console.error(`[decodeCrudo] No existe la carpeta: ${crudoDir}`);
+    return 0;
+  }
+
+  const items = fs.readdirSync(crudoDir).filter(n => /\.bin$/i.test(n));
+  if (!items.length) {
+    console.warn(`[decodeCrudo] No se encontraron .bin en: ${crudoDir}`);
+    return 0;
+  }
+
+  let copied = 0;
+  for (const name of items) {
+    const src = path.join(crudoDir, name);
+    const dst = uniquePath(outDir, name);
+    fs.copyFileSync(src, dst);
+    console.log(`[decodeCrudo] Copiado: ${src} → ${dst}`);
+    copied++;
+  }
+
+  console.log(`[decodeCrudo] Listo. Copiados ${copied} archivo(s) .bin a ${outDir}`);
+  return copied;
+}
+
+// ---- CLI ----
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const [, , crudoDir = "crudo", outDir = "output"] = process.argv;
+  try {
+    decodeCrudo(crudoDir, outDir);
+  } catch (err) {
+    console.error("[decodeCrudo] Error:", err && err.message);
+    process.exit(1);
+  }
+}

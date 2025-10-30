@@ -14,8 +14,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "framer-motion": "^12.23.24",
+    "jsdom": "^27.0.1",
+    "puppeteer": "^24.25.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "veloxi": "^0.15.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

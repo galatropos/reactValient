@@ -1,0 +1,15 @@
+body,html{
+    background: #D47501
+}
+.circle{
+
+    color:black;
+    background: white;
+    border-radius: 100%;
+    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width:60px;    
+    height: 60px;
+}

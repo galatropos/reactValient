@@ -1,0 +1,11 @@
+html, body {
+    color:#fff;
+    background: linear-gradient(to bottom,  #2B4470,#436DBD,#436DBD);
+}
+
+.blod{
+    font-weight: 900;
+}
+.marginTop{
+    margin-top: 10px;
+}
