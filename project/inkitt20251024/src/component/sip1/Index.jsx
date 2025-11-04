@@ -1,6 +1,6 @@
 import React from "react";
 import Concept from "../main/concept1/Index";
-import imageLogoGalatea from "../../../assets/image/test1/logoGalatea.png";
+import imageLogoGalatea from "../../../assets/image/logoGalatea.webp";
 import image1 from "../../../assets/image/test1/1.jpg";
 import image2 from "../../../assets/image/test1/2.jpg";
 import image3 from "../../../assets/image/test1/3.jpg";

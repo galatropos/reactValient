@@ -4,6 +4,18 @@ import { useProgress } from "./useProgress";
 
 const lerp = (t, a, b) => a + (b - a) * t;
 
+// 🔒 Memo por contenido: mantiene la misma referencia si el contenido no cambia
+function useDeepStable(value) {
+  const ref = useRef({ json: "", stable: value });
+  const json = useMemo(() => {
+    try { return JSON.stringify(value); } catch { return "" + Math.random(); }
+  }, [value]);
+  if (ref.current.json !== json) {
+    ref.current = { json, stable: value };
+  }
+  return ref.current.stable;
+}
+
 function buildRanges({ default: def, animate }) {
   const keys = new Set(Object.keys(def || {}));
   for (const [delta] of animate) {
@@ -37,32 +49,43 @@ export function useProgresses({
   onStepUpdate,
   onSequenceFinish,
   loop = false,
-  repeat = null,          // número de repeticiones
-  onStepChange,           // (stepIndex) => void  ✅ NUEVO
+  repeat = null,
+  onStepChange,
 }) {
+  // 🧊 Estabiliza entradas por contenido
+  const stableDefault = useDeepStable(defaultValue);
+  const stableAnimate = useDeepStable(animate);
+
   // Solo valores numéricos para interpolación
   const defaultValueFinish = useMemo(
     () =>
       Object.fromEntries(
-        Object.entries(defaultValue).filter(([, v]) => typeof v === "number")
+        Object.entries(stableDefault).filter(([, v]) => typeof v === "number")
       ),
-    [defaultValue]
+    [stableDefault]
   );
 
   const ranges = useMemo(
-    () => buildRanges({ default: defaultValueFinish, animate }),
-    [defaultValueFinish, animate]
+    () => buildRanges({ default: defaultValueFinish, animate: stableAnimate }),
+    [defaultValueFinish, stableAnimate]
   );
-  const times = useMemo(() => animate.map((a) => a?.[1] ?? 0), [animate]);
+  const times = useMemo(
+    () => stableAnimate.map((a) => (a?.[1] ?? 0)),
+    [stableAnimate]
+  );
 
   const [section, setSection] = useState(0);
   const [internal, setInternal] = useState("stop");
   const [sequenceValue, setSequenceValue] = useState(defaultValueFinish);
-  const [cycleCount, setCycleCount] = useState(0); // contador de ciclos
+  const [cycleCount, setCycleCount] = useState(0);
 
+  // Guarda el action previo para detectar transición real a "stop"
+  const prevActionRef = useRef(action);
+
+  // Acciones efectivas
   const effectiveAction = action === "pause" ? "pause" : internal;
 
-  // Notificar cambio de paso (solo cuando realmente cambie)
+  // Notificar cambio de paso
   const prevSectionRef = useRef(section);
   useEffect(() => {
     if (prevSectionRef.current !== section) {
@@ -71,26 +94,93 @@ export function useProgresses({
     }
   }, [section, onStepChange]);
 
-  // Responder a action externa
+  // Responder a cambios de action (solo si cambia realmente)
   useEffect(() => {
-    if (action === "stop") {
+    const prev = prevActionRef.current;
+    prevActionRef.current = action;
+
+    if (action === "stop" && prev !== "stop") {
       setInternal("stop");
       setSection(0);
       setSequenceValue(defaultValueFinish);
       setCycleCount(0);
-      onStepChange?.(0); // opcional: notifica reset al paso 0
-    } else if (action === "play") {
-      setInternal((prev) => (prev === "finish" ? "finish" : "play"));
+      onStepChange?.(0);
+      return;
     }
+    if (action === "play" && prev !== "play") {
+      setInternal((prevInt) => (prevInt === "finish" ? "finish" : "play"));
+    }
+    // si action === "pause" lo maneja effectiveAction arriba
   }, [action, defaultValueFinish, onStepChange]);
 
-  // Mantener play activo cuando cambia de sección y no está “finish”
+  // Mantener play activo al cambiar de sección si seguimos en "play"
   useEffect(() => {
     if (action === "play" && internal !== "finish") {
       setInternal("play");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
+
+  // 🚀 Saltar en caliente pasos con tiempo <= 0 para evitar cuelgues
+  useEffect(() => {
+    if (!stableAnimate.length) return;
+    let idx = section;
+    let jumped = false;
+
+    // salta todos los pasos con time<=0 seguidos
+    while (idx < times.length && (times[idx] ?? 0) <= 0) {
+      // Aplica deltas instantáneos
+      const r = ranges[idx] || {};
+      const current = {};
+      for (const key in r) {
+        const [i, f] = r[key];
+        current[key] = f; // al final del salto instantáneo
+      }
+      const stepDelta = stableAnimate[idx]?.[0] || null;
+      if (stepDelta) {
+        for (const k of Object.keys(stepDelta)) {
+          const v = stepDelta[k];
+          if (typeof v !== "number") current[k] = v;
+        }
+      }
+      setSequenceValue(current);
+      idx += 1;
+      jumped = true;
+    }
+
+    if (jumped) {
+      if (idx >= stableAnimate.length) {
+        // Fin de secuencia tras saltos
+        setCycleCount((c) => {
+          const newCount = c + 1;
+
+          if (repeat !== null && newCount >= repeat) {
+            setInternal("finish");
+            onSequenceFinish?.();
+            return newCount;
+          }
+          if (loop && action === "play") {
+            setInternal("stop");
+            setSection(0);
+            return newCount;
+          }
+          if (repeat !== null && newCount < repeat) {
+            setInternal("stop");
+            setSection(0);
+            return newCount;
+          }
+          setInternal("finish");
+          onSequenceFinish?.();
+          return newCount;
+        });
+      } else {
+        // Continúa en el primer paso con tiempo > 0
+        setInternal("stop");
+        setSection(idx);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, times, ranges, stableAnimate, loop, repeat, action, onSequenceFinish]);
 
   // Motor de avance por paso
   useProgress({
@@ -106,8 +196,8 @@ export function useProgresses({
         current[key] = lerp(s.progress, i, f);
       }
 
-      // Copiar claves NO numéricas del delta del paso (p.ej. anchor)
-      const stepDelta = animate[section]?.[0] || null;
+      // Copiar claves NO numéricas (anchor, etc.)
+      const stepDelta = stableAnimate[section]?.[0] || null;
       if (stepDelta) {
         for (const k of Object.keys(stepDelta)) {
           const v = stepDelta[k];
@@ -121,35 +211,28 @@ export function useProgresses({
       if (action === "pause") return;
 
       if (s.status === "finish") {
-        const last = section >= animate.length - 1;
+        const last = section >= stableAnimate.length - 1;
 
         if (last) {
           // ciclo completo
           setCycleCount((c) => {
             const newCount = c + 1;
 
-            // repeat definido y alcanzado
             if (repeat !== null && newCount >= repeat) {
               setInternal("finish");
               onSequenceFinish?.();
               return newCount;
             }
-
-            // loop infinito
             if (loop && action === "play") {
               setInternal("stop");
-              setSection(0); // disparará onStepChange(0)
+              setSection(0);
               return newCount;
             }
-
-            // repeat definido y aún quedan ciclos
             if (repeat !== null && newCount < repeat) {
               setInternal("stop");
-              setSection(0); // disparará onStepChange(0)
+              setSection(0);
               return newCount;
             }
-
-            // sin repeat ni loop → terminar
             setInternal("finish");
             onSequenceFinish?.();
             return newCount;
@@ -157,18 +240,18 @@ export function useProgresses({
           return;
         }
 
-        // Avanza a la siguiente sección (paso del animate)
+        // Avanzar a la siguiente sección
         setInternal("stop");
-        setSection((idx) => idx + 1); // disparará onStepChange(idx+1)
+        setSection((idx) => idx + 1);
       }
     },
   });
 
   return {
     sequenceValue,
-    section,                   // índice actual del paso
-    stepIndex: section,        // alias claro
-    stepCount: animate.length, // total de pasos
+    section,
+    stepIndex: section,
+    stepCount: stableAnimate.length,
     status: effectiveAction,
     cycleCount,
   };

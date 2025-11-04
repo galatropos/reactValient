@@ -5,11 +5,19 @@ import imageHand from "../../../../assets/image/concept1/hand.webp";
 const Hand = ({controller}) => {
     const animate=[
         [{ }, 400],
-        [{opacity:1,x: -10}, 300],
-        [{x: -25}, 300],
+        [{opacity:1}, 100],
+        [{x: -25}, 400],
         [{opacity:-1}, 200],
         [{ }, 700],
     ];
+
+    const animateLandscape=[
+      [{ }, 400],
+      [{opacity:1}, 100],
+      [{x: -15}, 400],
+      [{opacity:-1}, 200],
+      [{ }, 700],
+  ];
     const configHand = {
     
         style: {
@@ -31,10 +39,10 @@ const Hand = ({controller}) => {
         landscape: {
           x: 25,
           y: 80,
-          width: 30,
+          width: 20,
           opacity:0,
-          animate,
-          height: 25,
+          animate:animateLandscape,
+          height: 20,
           anchor: "left",
         },
         loop: true,

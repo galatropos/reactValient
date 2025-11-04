@@ -4,12 +4,11 @@ import image1 from "../../../assets/image/sip2/1.webp";
 import image2 from "../../../assets/image/sip2/2.webp";
 import image3 from "../../../assets/image/sip2/3.webp";
 import imageLast from "../../../assets/image/sip2/last.webp";
-import imageLogoGalatea from "../../../assets/image/logoGalatea.png";
+import imageLogoGalatea from "../../../assets/image/logoGalatea.webp";
 import FontChange from "../../../../../src/component/FontChange";
 import Inter from "../../../../../src/assets/font/Inter/Inter-VariableFont_opsz,wght.ttf";
 import Novel from "../sip7/Novel";
 import novel from "../../../../../src/assets/font/Noto_Serif/NotoSerif-VariableFont_wdth,wght.ttf";
-
 const Index = () => {
   FontChange({ fontUrl: [Inter,novel], fontFamily: ["Inter","novel"] });
 

@@ -8,7 +8,6 @@ import AutoScrollBox from "../../../../../../src/component/AutoScrollBox";
 
 
 const Video = ({
-  finish,
   logo,
   title,
   image,
@@ -25,7 +24,7 @@ const Video = ({
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
-      borderRadius: "20px",
+      borderRadius: "30px",
     },
     backgroundImage: image,
     portrait: {
@@ -54,13 +53,12 @@ const Video = ({
     ${hexadecimalToRgba(backgroundColor, 1)} 20%,
     ${hexadecimalToRgba(backgroundColor, 1)} 30%,
     ${hexadecimalToRgba(backgroundColor, 1)} 40%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 50%,
+    ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
     ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
     ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
     ${hexadecimalToRgba(backgroundColor, 7)} 100%
     ), url(${image})`,
 
-    /* backgroundImage: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,2) 20%, rgba(0,0,0,3) 30%, rgba(0,0,0,.8) 50%, rgba(0,0,0,.9) 90%, rgba(0,0,0,.8) 100% ), url(${image}), */
     },
     portrait: {
       x: 50,
@@ -88,7 +86,7 @@ const Video = ({
     },
     portrait: {
       x: 50,
-      y: 93,
+      y: 95.5,
       width: 40,
       height: 6,
       anchor: "bottom",
@@ -142,7 +140,7 @@ const Video = ({
       width: 90,
       height: 45,
       anchor: "middle",
-      fontSize: 6,
+      fontSize: 4,
     },
     landscape: {
       x: 70,
@@ -154,19 +152,18 @@ const Video = ({
     },
     children: `‘‘${title}’’`,
   };
-
   return (
-    <span style={{ display: finish ? "block" : "none" }}>
+    <>
       <Card {...configBackground} />
       <Card {...configPorte} />
       <Card {...configLogo} />
       <Card {...configTitle} >
-        <AutoScrollBox fitParent={true} height="100%" >
+        <AutoScrollBox controlsMode="hidden" fitParent={true} height="100%" >
         {text}
         </AutoScrollBox>
       </Card>
       <Card {...configCta} />
-    </span>
+    </>
   );
 };
 

@@ -1,171 +1,146 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Card from "../../../../../../src/component/Card";
 import imageAccept from "../../../../assets/image/concept3/accept.webp";
 import imageDenied from "../../../../assets/image/concept3/denied.webp";
+import hexadecimalToRgba from "../../../../../../src/utils/hexadecimalToRgba";
 
-const Circle = ({ next, length }) => {
-  const [accept, setAccept] = useState("stop");
-  const [denied, setDenied] = useState("stop");
-
-  const animate = [
-    [{ scale: +0.2 }, 100],
-    [{ scale: -0.2 }, 100],
-  ];
-
-  useEffect(() => {
-    if (next > 0) {
-      if (next === length) setAccept("play");
-      else setDenied("play");
-    }
-
-    setTimeout(() => {
-      setAccept("stop");
-      setDenied("stop");
-    }, 500);
-  }, [next]);
+const Circle = ({  direction }) => {
 
   const configCircleAccept = {
     style: {
       background: `url(${imageAccept}) center/contain no-repeat`,
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
-      filter: `
-      brightness(0) saturate(100%)
-      invert(86%) sepia(10%) saturate(1000%)
-      hue-rotate(90deg) brightness(98%) contrast(92%)
-    `,
+      zIndex:20,
+
     },
     portrait: {
       x: 63.5,
-      y: 78.5,
+      y: 77.5,
       width: 19.5,
       height: 6.8,
-      animate,
-      scale: 1,
       anchor: "middle",
+      scale: direction === "right" ? 1.2 : 1,
     },
     landscape: {
-      x: 68.5,
-      y: 52,
-      width: 9,
+      scale: direction === "right" ? 1.2 : 1,
+      width: 8,
       height: 29,
       anchor: "middle",
-      scale: 1,
-      animate,
-      fontSize: 3.5,
+      fontSize: 3.55,
+      x: 85.4,
+      y: 47,
     },
-    loop: false,
-    controlsAnimate: accept,
   };
   const configCircleDenied = {
     style: {
       background: `url(${imageDenied}) center/contain no-repeat`,
       backgroundSize: "50%",
       backgroundPosition: "center",
+      zIndex:20,
       backgroundRepeat: "no-repeat",
-      filter: `
-   brightness(0) saturate(100%)
-      invert(88%) sepia(12%) saturate(900%)
-      hue-rotate(315deg) brightness(103%) contrast(90%)
-  `,
     },
     portrait: {
       x: 37.8,
-      y: 78.3,
+      y: 77.3,
       width: 9,
-      scale: 1,
+      scale: direction === "left" ? 1.2 : 1,
       height: 10.5,
-      animate,
       anchor: "middle",
     },
     landscape: {
-      x: 90.3,
-      y: 50.5,
-      width: 8,
+      width: 6.5,
       height: 29,
       anchor: "middle",
-      scale: 1,
+      scale: direction === "left" ? 1.2 : 1,
       fontSize: 3.5,
-      animate,
+      x: 15.5,
+      y: 46,
     },
-    loop: false,
-    controlsAnimate: denied,
   };
 
   const configCircleAccept2 = {
     style: {
       backgroundPosition: "center",
       border: "6px solid #B0ECAA",
+      zIndex:20,
+
       borderRadius: "50%",
       backgroundRepeat: "no-repeat",
-      filter: `
-      brightness(0) saturate(100%)
-      invert(86%) sepia(10%) saturate(1000%)
-      hue-rotate(90deg) brightness(98%) contrast(92%)
-    `,
+      background: `radial-gradient(circle at center,
+      ${hexadecimalToRgba("#B0ECAA", 0)} 0%,
+      ${hexadecimalToRgba("#B0ECAA", 0.1)} 10%,
+      ${hexadecimalToRgba("#B0ECAA", 0.2)} 20%,
+      ${hexadecimalToRgba("#B0ECAA", 0.3)} 30%,
+      ${hexadecimalToRgba("#B0ECAA", 0.4)} 40%,
+      ${hexadecimalToRgba("#B0ECAA", 0.5)} 50%,
+      ${hexadecimalToRgba("#B0ECAA", 0.6)} 60%,
+      ${hexadecimalToRgba("#B0ECAA", 0.7)} 70%,
+      ${hexadecimalToRgba("#B0ECAA", 0.8)} 80%,
+      ${hexadecimalToRgba("#B0ECAA", 0.9)} 90%,
+      ${hexadecimalToRgba("#B0ECAA", 1)} 100%)
+
+      
+      `,
     },
     portrait: {
       x: 63,
-      y: 78,
-      width: 19,
-      height: 10.5,
-      animate,
-      scale: 1,
+      y: 77,
+      width: 19.5,
+      height: 11.3,
+      scale: direction === "right" ? 1.2 : 1,
+
       anchor: "middle",
     },
     landscape: {
-      x: 68,
-      y: 50,
-      width: 13.9,
-      height: 23,
+      width: 11.7,
+      height: 20.7,
       anchor: "middle",
-      scale: 1,
-      animate,
       fontSize: 3.5,
+      scale: direction === "right" ? 1.2 : 1,
+      x: 85,
+      y: 46,
     },
-    loop: false,
-    controlsAnimate: accept,
   };
   const configCircleDenied2 = {
     style: {
       backgroundPosition: "center",
+      zIndex:20,
       backgroundRepeat: "no-repeat",
-      border: "6px solid #B0ECAA",
+      border: "6px solid #ECAAAA",
       borderRadius: "50%",
-      filter: `
-   brightness(0) saturate(100%)
-      invert(88%) sepia(12%) saturate(900%)
-      hue-rotate(315deg) brightness(103%) contrast(90%)
-  `,
+      background: `radial-gradient(circle at center,
+      ${hexadecimalToRgba("#ECAAAA", 0)} 0%,
+      ${hexadecimalToRgba("#ECAAAA", 0.55)} 55%,
+      ${hexadecimalToRgba("#ECAAAA", 1)} 75%,
+      ${hexadecimalToRgba("#ECAAAA", 1)} 60%,
+      ${hexadecimalToRgba("#ECAAAA", 1)} 100%)
+      `,
     },
     portrait: {
       x: 37,
-      y: 78,
-      width: 19,
-      scale: 1,
-      height: 10.5,
-      animate,
+      y: 77,
+      width: 19.5,
+      height: 11.3,
       anchor: "middle",
+      scale: direction === "left" ? 1.2 : 1,
     },
     landscape: {
-      x: 90,
-      y: 50,
-      width: 13.9,
-      height: 23,
+      width: 11.7,
+      height: 20.7,
       anchor: "middle",
-      scale: 1,
+      scale: direction === "left" ? 1.2 : 1,
       fontSize: 3.5,
-      animate,
+      x: 15,
+      y: 46,
     },
-    loop: false,
-    controlsAnimate: denied,
   };
   return (
     <>
-      <Card key={"a1"} {...configCircleAccept} />
       <Card key={"a2"} {...configCircleAccept2} />
-      <Card key={"a3"} {...configCircleDenied} />
+      <Card key={"a1"} {...configCircleAccept} />
       <Card key={"a4"} {...configCircleDenied2} />
+      <Card key={"a3"} {...configCircleDenied} />
     </>
   );
 };

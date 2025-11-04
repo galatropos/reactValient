@@ -10,9 +10,12 @@ const Select = ({
   xp = 52, yp = 52, xl = 20, yl = 10,
   handleOn = "select",
   br=0,bl=0,bt=0,bb=0,
-  setActive
+  setActive,
+  setActiveReady,
+  id
 }) => {
   const startClick = useAudio(audioClick);
+
 
   const [activado, setActivado] = useState(false);
   const [controller, setController] = useState("stop");
@@ -24,8 +27,15 @@ const Select = ({
   const controllerRef = useRef(controller);
   useEffect(() => { controllerRef.current = controller; }, [controller]);
 
+useEffect(()=>{
 
-
+    setActiveReady(e=>{
+      const newArray=e.map(e=>e)
+      newArray[id]=activado
+      return newArray
+    }
+  )
+},[activado,id])
 
   // ---------------------------------------
 

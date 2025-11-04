@@ -99,7 +99,7 @@ const Quiz = ({quest,text,title,setNext,colorQuest,colorActive,backgrounColor}) 
         },
         portrait: {
           x:50,
-          y:52.5,
+          y:55,
           width: 90,
           height: 9,
           anchor: "top",
@@ -146,7 +146,7 @@ const Quiz = ({quest,text,title,setNext,colorQuest,colorActive,backgrounColor}) 
         loop:true,
     }
 
-
+const yl=4
   return (
   <>
   <Card {...configQuestion} >
@@ -159,10 +159,10 @@ const Quiz = ({quest,text,title,setNext,colorQuest,colorActive,backgrounColor}) 
     </span>
 
   </Card>
-  <Response key={1} xp={50} yp={64} xl={55} yl={46}  text={quest[0]} setNext={setNext} colorActive={colorActive}    />
-  <Response key={2} xp={50} yp={72} xl={55} yl={58} text={quest[1]}  setNext={setNext} colorActive={colorActive} />
-  <Response key={3} xp={50} yp={80} xl={55} yl={70} text={quest[2]}  setNext={setNext} colorActive={colorActive} />
-  <Response key={4} xp={50} yp={88} xl={55} yl={82} text={quest[3]}  setNext={setNext} colorActive={colorActive} />
+  <Response key={1} xp={50} yp={64+2} xl={55} yl={46+yl}  text={quest[0]} setNext={setNext} colorActive={colorActive}    />
+  <Response key={2} xp={50} yp={72+2} xl={55} yl={58+yl} text={quest[1]}  setNext={setNext} colorActive={colorActive} />
+  <Response key={3} xp={50} yp={80+2} xl={55} yl={70+yl} text={quest[2]}  setNext={setNext} colorActive={colorActive} />
+  <Response key={4} xp={50} yp={88+2} xl={55} yl={82+yl} text={quest[3]}  setNext={setNext} colorActive={colorActive} />
   <Card {...configBlur} />
  
   </>

@@ -1,6 +1,6 @@
 import React from "react";
 import Concept from "../main/concept5/Index";
-import imageLogoCandy from "../../../assets/image/sip5/logo.webp";
+import imageLogoCandy from "../../../assets/image/logoCandy.webp";
 import imageIcoCandy from "../../../assets/image/sip5/ico.png";
 import Inter from "../../../../../src/assets/font/Inter/Inter-VariableFont_opsz,wght.ttf";
 import FontChange from "../../../../../src/component/FontChange";

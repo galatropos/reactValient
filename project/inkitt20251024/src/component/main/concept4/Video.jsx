@@ -60,13 +60,13 @@ const Video = ({
       scale: 1,
     },
     landscape: {
-      fontSize: 3,
-      x: 70,
-      y: 92,
-      width: 27,
-      height: 15,
+      x: 50,
+      y: 96,
+      width: 40,
+      height: 6,
       anchor: "bottom",
-        animate:animatePendule(),
+      fontSize: 4,
+      animate: animatePendule(),
   
     },
     children: cta,
@@ -80,7 +80,7 @@ const Video = ({
     },
     portrait: {
       x: 50,
-      y: 3,
+      y: 4,
       width: 30,
       height: 10,
       anchor: "top",
@@ -125,7 +125,7 @@ const Video = ({
         portraitSrc={srcPortrait}
         landscapeSrc={srcLandscape}
         muted={!finish}
-        loop={false}
+        loop={true}
         autoPlay={true}
         reset={finish}
       />

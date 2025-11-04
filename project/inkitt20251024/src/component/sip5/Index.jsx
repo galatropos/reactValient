@@ -1,7 +1,7 @@
 import React from "react";
 import Concept from "../main/concept3/Index";
-import Novel from "./Novel";
-import imageLogoGalatea from "../../../assets/image/sip5/logoGalatea.png";
+import Novel from "../../../assets/novel/Novel4.jsx"
+import imageLogoGalatea from "../../../assets/image/logoGalatea.webp";
 import imageIcoGalatea from "../../../assets/image/sip5/icoGalatea.png";
 import Inter from "../../../../../src/assets/font/Inter/Inter-VariableFont_opsz,wght.ttf";
 import FontChange from "../../../../../src/component/FontChange";
@@ -11,6 +11,7 @@ import porte from "../../../assets/video/sip5/porte.webp";
 import image1 from "../../../assets/image/test3/1.webp";
 import image2 from "../../../assets/image/test3/2.webp";
 import image3 from "../../../assets/image/test3/3.webp";
+import  imageAvatar from "../../../assets/image/sip7/avatar.webp";
  
 const Index = () => { 
    FontChange({ fontUrl: [Inter,novel], fontFamily: ["Inter","novel"] });
@@ -22,6 +23,7 @@ const Index = () => {
     title: "Chapert 1 lorem ipsum",
   };
   const galatea = {
+    imageAvatar:imageAvatar,
     backgroundColor:"#1B1B1C" ,
     mraid: {
       appstore:

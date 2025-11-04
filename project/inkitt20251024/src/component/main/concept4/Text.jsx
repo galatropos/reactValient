@@ -34,9 +34,9 @@ const Text = ({
       anchor: "middle",
     },
     landscape: {
-      x: 20,
+      x: 27,
       y: 50,
-      width: 25,
+      width: 31,
       height: 85,
       anchor: "middle",
     },
@@ -52,7 +52,7 @@ const Text = ({
     ${hexadecimalToRgba(backgroundColor, 1)} 20%,
     ${hexadecimalToRgba(backgroundColor, 1)} 30%,
     ${hexadecimalToRgba(backgroundColor, 1)} 40%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 50%,
+    ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
     ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
     ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
     ${hexadecimalToRgba(backgroundColor, 7)} 100%
@@ -85,7 +85,7 @@ const Text = ({
     },
     portrait: {
       x: 50,
-      y: 93,
+      y: 95,
       width: 40,
       height: 6,
       anchor: "bottom",
@@ -112,7 +112,7 @@ const Text = ({
     },
     portrait: {
       x: 50,
-      y: 3,
+      y: 4,
       width: 30,
       height: 10,
       anchor: "top",
@@ -130,7 +130,6 @@ const Text = ({
       color: "white",
       fontWeight: "bold",
       flexDirection: "column",
-
       fontFamily:"novel", 
     },
     portrait: {
@@ -139,12 +138,12 @@ const Text = ({
       width: 90,
       height: 45,
       anchor: "middle",
-      fontSize: 6,
+      fontSize: 4,
     },
     landscape: {
       x: 70,
       y: 52,
-      width: 40,
+      width: 35,
       height: 55,
       anchor: "middle",
       fontSize: 2,
@@ -158,7 +157,7 @@ const Text = ({
       <Card {...configPorte} />
       <Card {...configLogo} />
       <Card {...configTitle} >
-        <AutoScrollBox fitParent={true} height="100%" >
+        <AutoScrollBox fitParent={true} height="100%" controlsMode="hidden">
         {text}
         </AutoScrollBox>
       </Card>

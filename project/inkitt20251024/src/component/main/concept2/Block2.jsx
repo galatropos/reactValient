@@ -5,7 +5,7 @@ import VideoToFramesPlayer from "../../../../../../src/component/VideoToFramesPl
 import animatePendule from "../../../../../../src/utils/animate/animatePendule";
 import { useRedirectMIPEvent } from "../../../../../../src/hook/useRedirectMIP";
 
-const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid,backgroundColor }) => {
+const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid,backgroundColor,title }) => {
   const configLogo = {
     style: {
       backgroundImage: `url(${logo})`,
@@ -14,8 +14,8 @@ const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid
       backgroundRepeat: "no-repeat",
       borderRadius: "20px",
     },
-    portrait: { x: 50, y: 3, width: 40, height: 9, anchor: "top" },
-    landscape: { x: 72.5, y: 9, width: 20, height: 13, anchor: "top", rotate: 0, scale: 1 },
+    portrait: { x: 50, y: 4.4, width: 40, height: 9, anchor: "top" },
+    landscape: { x: 72.5, y: 6, width: 20, height: 13, anchor: "top", rotate: 0, scale: 1 },
   };
 
 
@@ -55,7 +55,7 @@ const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid
     },
     landscape: {
       x: 72.5,
-      y: 91,
+      y: 93.5,
       width: 25,
       height: 10,
       anchor: "bottom",
@@ -74,14 +74,42 @@ const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid
       flexDirection: "column",
       borderRadius:"40px",
     },
-    portrait: { x: 50, y: 48, width: 65, height: 60, anchor: "middle", scale: 1, fontSize: 5 },
-    landscape: { x: 30, y: 50, width: 30, height: 82, anchor: "middle", scale: 1, fontSize: 3.5 },
+    portrait: { x: 50, y: 57, width: 65, height: 55, anchor: "middle", scale: 1, fontSize: 4 },
+    landscape: { x: 30, y: 50, width: 30, height: 82, anchor: "middle", scale: 1, fontSize: 3 },
   };
+  const configTitle={
+    style:{
+      color:"white",
+      fontWeight:"bold",
+      flexDirection:"column",
+      borderRadius:"30px",      
+    },
+    portrait:{
+      x:50,
+      y:20,
+      width:90,
+      height:12,
+      hidden: !finish,
+      anchor:"middle",
+      fontSize:7,
+    },
+    landscape:{
+      x:72,
+      y:50,
+      fontSize:4,
+      width:45,
+      height:20,
+      hidden: !finish,
+      anchor:"middle",
+    }
+  }
+
 
   return (
     <>
       <Card {...configLogo} />
       <Card {...configCta}>{ctaText}</Card>
+      <Card {...configTitle}>{title}</Card>
 
       {video ? (
         <VideoToFramesPlayer
@@ -91,7 +119,7 @@ const Block2 = ({ children, ctaColor, ctaText, video, finish = true, logo, mraid
           muted={!finish}
           reset={finish}
           autoPlay={true}
-          loop={false}
+          loop={true}
         />
       ) : (
         <Card {...configContent}>

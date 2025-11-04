@@ -2,14 +2,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
- * useAudio("ruta/mi-audio.mp3")
- * Controles: play, pause, stop, toggleLoop, setLoop, automatic
+ * useAudio(src, { trackTime = true, timeUpdateMs = 250 } )
+ * Controles: play, pause, stop, toggleLoop, setLoop
  * Estados: isReady, isPlaying, loop, currentTime, duration, error
  *
  * Móvil-safe y persistente: sin AudioContext; reintenta hasta que suene.
  * Default target ahora: #root → #container → body
+ *
+ * Ejemplos:
+ * const s = useAudio("/mi.mp3", { trackTime: false }); // no re-renders por timeupdate
+ * const s = useAudio("/mi.mp3", { timeUpdateMs: 1000 }); // 1 actualización/seg
  */
-export default function useAudio(src) {
+export default function useAudio(src, opts = {}) {
+  const { trackTime = false, timeUpdateMs = 250 } = opts;
+
   const audioRef = useRef(null);
   const holderRef = useRef(null);
   const autoCleanupRef = useRef(null);
@@ -37,33 +43,40 @@ export default function useAudio(src) {
     el.preload = "auto";
     el.loop = loop;
     el.setAttribute("playsinline", "");
-    // el.setAttribute("controls", ""); // opcional (queda oculto)
     if (src) el.src = src;
 
     holderRef.current?.appendChild(el);
     audioRef.current = el;
 
-    const onCanPlay = () => { setIsReady(true); setDuration(el.duration || 0); };
+    const onCanPlay = () => {
+      setIsReady(true);
+      setDuration(el.duration || 0);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    const onTimeUpdate = () => setCT(el.currentTime || 0);
-    const onEnded = () => { setIsPlaying(false); setCT(el.currentTime || 0); };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCT(el.currentTime || 0);
+    };
     const onError = () => setError(el.error || new Error("Audio error"));
 
     el.addEventListener("canplay", onCanPlay);
     el.addEventListener("play", onPlay);
     el.addEventListener("pause", onPause);
-    el.addEventListener("timeupdate", onTimeUpdate);
     el.addEventListener("ended", onEnded);
     el.addEventListener("error", onError);
 
     return () => {
-      if (autoCleanupRef.current) { autoCleanupRef.current(); autoCleanupRef.current = null; }
-      try { el.pause(); } catch {}
+      if (autoCleanupRef.current) {
+        autoCleanupRef.current();
+        autoCleanupRef.current = null;
+      }
+      try {
+        el.pause();
+      } catch {}
       el.removeEventListener("canplay", onCanPlay);
       el.removeEventListener("play", onPlay);
       el.removeEventListener("pause", onPause);
-      el.removeEventListener("timeupdate", onTimeUpdate);
       el.removeEventListener("ended", onEnded);
       el.removeEventListener("error", onError);
       el.parentNode?.removeChild(el);
@@ -71,6 +84,28 @@ export default function useAudio(src) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- listener timeupdate con throttling y opt-out ----
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    let last = 0;
+    const onTimeUpdate = () => {
+      if (!trackTime) return; // opt-out: no actualiza estado -> no re-render
+      const now = (typeof performance !== "undefined" && performance.now)
+        ? performance.now()
+        : Date.now();
+      if (now - last < Math.max(0, timeUpdateMs)) return; // throttling
+      last = now;
+      setCT(el.currentTime || 0);
+    };
+
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      el.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [trackTime, timeUpdateMs]);
 
   // ---- actualizar src sin recrear el <audio> ----
   useEffect(() => {
@@ -84,7 +119,6 @@ export default function useAudio(src) {
       el.removeAttribute("src");
       el.load();
     }
-    // listeners persistentes siguen activos (no limpiar aquí)
   }, [src]);
 
   // sincroniza loop
@@ -109,14 +143,20 @@ export default function useAudio(src) {
     }
   }, []);
 
-  const pause = useCallback(() => { audioRef.current?.pause(); }, []);
-  const stop  = useCallback(() => {
+  const pause = useCallback(() => {
+    audioRef.current?.pause();
+  }, []);
+
+  const stop = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
     el.pause();
-    try { el.currentTime = 0; } catch {}
+    try {
+      el.currentTime = 0;
+    } catch {}
   }, []);
-  const toggleLoop = useCallback(() => setLoop(v => !v), []);
+
+  const toggleLoop = useCallback(() => setLoop((v) => !v), []);
   const setCurrent = useCallback((t) => {
     if (audioRef.current && Number.isFinite(t)) {
       audioRef.current.currentTime = Math.max(0, t);
@@ -137,7 +177,10 @@ export default function useAudio(src) {
    */
   const automatic = useCallback((opts = {}) => {
     // Rearmado limpio
-    if (autoCleanupRef.current) { autoCleanupRef.current(); autoCleanupRef.current = null; }
+    if (autoCleanupRef.current) {
+      autoCleanupRef.current();
+      autoCleanupRef.current = null;
+    }
 
     let defaultTarget = null;
     if (typeof document !== "undefined") {
@@ -150,14 +193,21 @@ export default function useAudio(src) {
     const {
       target = defaultTarget,
       events = [
-        "touchstart", "touchend", "touchcancel",
-        "pointerdown", "pointerup", "pointercancel",
-        "mousedown", "mouseup",
-        "click", "keydown",
+        "touchstart",
+        "touchend",
+        "touchcancel",
+        "pointerdown",
+        "pointerup",
+        "pointercancel",
+        "mousedown",
+        "mouseup",
+        "click",
+        "keydown",
       ],
     } = opts;
 
-    if (!target || typeof target.addEventListener !== "function") return () => {};
+    if (!target || typeof target.addEventListener !== "function")
+      return () => {};
 
     let armed = true; // hasta éxito
     const options = { capture: true, passive: false }; // ¡sin once!
@@ -193,17 +243,23 @@ export default function useAudio(src) {
           el.muted = true;
           const p2 = el.play(); // NO await
           if (p2 && typeof p2.then === "function") {
-            p2.then(() => {
-              // ya “desbloqueó”: desmutea y reintenta audible
-              el.muted = false;
-              if (el.volume === 0) el.volume = 1;
-              const p3 = el.play();
-              if (p3 && typeof p3.then === "function") {
-                p3.then(onSuccess).catch(() => {/* espera próximo gesto */});
-              } else {
-                onSuccess();
-              }
-            }).catch(() => {/* espera próximo gesto */});
+            p2
+              .then(() => {
+                // ya “desbloqueó”: desmutea y reintenta audible
+                el.muted = false;
+                if (el.volume === 0) el.volume = 1;
+                const p3 = el.play();
+                if (p3 && typeof p3.then === "function") {
+                  p3.then(onSuccess).catch(() => {
+                    /* espera próximo gesto */
+                  });
+                } else {
+                  onSuccess();
+                }
+              })
+              .catch(() => {
+                /* espera próximo gesto */
+              });
           } else {
             // sin Promise: asumimos éxito y hacemos audible
             el.muted = false;

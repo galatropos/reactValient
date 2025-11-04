@@ -5,10 +5,10 @@ import audioSountrack from "../../../../assets/audio/sountrack1.mp3";
 import useAudio from "../../../../../../src/hook/useAudio";
 import Card from "../../../../../../src/component/Card";
 
-const Index = ({ imageMain, text, logo, title, ctaColor, ctaText, video,mraid,backgroundColor }) => {
+const Index = ({ imageMain, text, logo, title, ctaColor, ctaText, video,mraid,backgroundColor,titleBook }) => {
   document.body.style.backgroundColor = backgroundColor;
   const [next, setNext] = useState(0);
-  let startSountrack=useAudio(audioSountrack);
+  let startSountrack=useAudio(audioSountrack, { trackTime: false });
   useEffect(()=>{startSountrack.automatic();startSountrack.setLoop(true);},[])
 useEffect(() => {
   if(!text&&next===1){
@@ -60,6 +60,7 @@ const configWall={
           logo={logo}
           mraid={mraid}
           backgroundColor={backgroundColor}
+          title={titleBook}
 
         >
           {text}

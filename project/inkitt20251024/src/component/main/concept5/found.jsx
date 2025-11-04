@@ -8,6 +8,8 @@ const found = ({footerColor,finish,ico,ctaText,logo,footerText,ctaColor}) => {
           fontWeight: "bold",
           flexDirection: "column",
           background: footerColor,
+          zIndex:100,
+
         },
         portrait: {
           x: 50,
@@ -36,6 +38,7 @@ const found = ({footerColor,finish,ico,ctaText,logo,footerText,ctaColor}) => {
           flexDirection: "column",
           backgroundRepeat: "no-repeat",
           backgroundSize: "contain",
+          zIndex:100,
         },
         backgroundImage: ico,
         portrait: {
@@ -57,23 +60,24 @@ const found = ({footerColor,finish,ico,ctaText,logo,footerText,ctaColor}) => {
       };
       const configCta = {
         style: {
-          color: "white",
+          color: ctaColor,
           fontWeight: 800,
           flexDirection: "column",
-          background: ctaColor,
+          background: "white",
+          zIndex:100,
           borderRadius: "20px",
         },
         portrait: {
-          x: 95,
-          y: 91.5,
+          x: 95.8,
+          y: 92,
           width: 30,
           height: 6,
           anchor: "right-top",
           fontSize: 3.7,
         },
         landscape: {
-          x: 95,
-          y: 84,
+          x: 95.4,
+          y: 84.8,
           width: 17,
           height: 10,
           anchor: "right-top",
@@ -87,17 +91,18 @@ const found = ({footerColor,finish,ico,ctaText,logo,footerText,ctaColor}) => {
         style: {
           filter: "brightness(0) saturate(1) invert(1) ",
             backgroundSize: "contain",
-        },
+            zIndex:100,
+          },
         portrait: {
           x: 14,
           y: 98,
-          width: 19.6,
-          height: 5.3,
+          width: 14,
+          height: 5,
           anchor: "bottom",
         },
         landscape: {
           x: 13,
-          y: 99,
+          y: 98.6,
           width: 11,
           height: 13,
           anchor: "bottom",
@@ -108,18 +113,19 @@ const found = ({footerColor,finish,ico,ctaText,logo,footerText,ctaColor}) => {
         style: {
           flexDirection: "row",
           justifyContent: "left",
+          zIndex:100,
         },
         portrait: {
-          x: 23,
-          y: 93.8,
+          x: 23.2,
+          y: 94,
           width: 40,
           height: 5.3,
           anchor: "bottom",
           fontSize: 3.5,
         },
         landscape: {
-          x: 16,
-          y: 90,
+          x: 16.5,
+          y: 89.4,
           width: 25,
           height: 13,
           anchor: "bottom",

@@ -15,7 +15,6 @@ const Video = ({
   ctaColor,
   mraid,
   backgroundColor,
-  text
 }) => {
   
   const configPorte = {
@@ -28,8 +27,8 @@ const Video = ({
     backgroundImage: image,
     portrait: {
       x: 50,
-      y: 15,
-      width: 80,
+      y: 15.5,
+      width: 70,
       height: 61,
       anchor: "top",
     },
@@ -52,7 +51,7 @@ const Video = ({
     ${hexadecimalToRgba(backgroundColor, 1)} 20%,
     ${hexadecimalToRgba(backgroundColor, 1)} 30%,
     ${hexadecimalToRgba(backgroundColor, 1)} 40%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 50%,
+    ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
     ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
     ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
     ${hexadecimalToRgba(backgroundColor, 7)} 100%
@@ -85,7 +84,7 @@ const Video = ({
     },
     portrait: {
       x: 50,
-      y: 93,
+      y: 96,
       width: 40,
       height: 6,
       anchor: "bottom",
@@ -113,7 +112,7 @@ const Video = ({
     portrait: {
       x: 50,
       y: 3,
-      width: 30,
+      width: 27,
       height: 10,
       anchor: "top",
     },
@@ -130,11 +129,10 @@ const Video = ({
       color: "white",
       fontWeight: "bold",
       flexDirection: "column",
-
     },
     portrait: {
       x: 50,
-      y: 80,
+      y: 83,
       width: 90,
       height: 45,
       anchor: "middle",
@@ -143,10 +141,10 @@ const Video = ({
     landscape: {
       x: 70,
       y: 52,
-      width: 40,
+      width: 50,
       height: 55,
       anchor: "middle",
-      fontSize: 2,
+      fontSize: 4.5,
     },
     children: `‘‘${title}’’`,
   };

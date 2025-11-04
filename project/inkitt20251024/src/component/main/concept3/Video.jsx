@@ -15,11 +15,13 @@ const Video = ({
   ctaColor,
   mraid,
 }) => {
+
   const configVideo = {
     style: {
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
+      borderRadius: "40px",
     },
     portrait: {
       x: 50,
@@ -46,7 +48,7 @@ const Video = ({
     },
     portrait: {
       x: 50,
-      y: 93,
+      y: 95,
       width: 40,
       height: 6,
       anchor: "bottom",
@@ -121,7 +123,7 @@ const Video = ({
         portraitSrc={srcPortrait}
         landscapeSrc={srcLandscape}
         muted={!finish}
-        loop={false}
+        loop={true}
         autoPlay={true}
         reset={finish}
       />

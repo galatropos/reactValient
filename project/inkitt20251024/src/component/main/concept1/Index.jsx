@@ -79,7 +79,7 @@ const Video = ({
           landscapeSrc={video?.srcLandscape}
           muted={!finish}
           pause={finish}
-          loop={false}
+          loop={true}
           autoPlay
           reset={finish}
           noCard
@@ -103,8 +103,8 @@ const Video = ({
   // 4) Configs MEMO para no reiniciar useProgresses en Card
   const configCarrousel = useMemo(() => ({
     style: {},
-    portrait: { x: 50, y: 55, width: 50, height: 50, anchor: "middle", fontSize: 5 },
-    landscape: { x: 10, y: 9, width: 30, height: 83, anchor: "left-top", fontSize: 3 },
+    portrait: { x: 50, y: 57, width: 55, height: 49.4, anchor: "middle", fontSize: 4 },
+    landscape: { x: 10, y: 50, width: 30, height: 83, anchor: "left", fontSize: 2 },
   }), []);
 
   const confiWall = useMemo(() => ({
@@ -117,20 +117,20 @@ const Video = ({
     backgroundImage: logo,
     style: { backgroundSize: "95%" },
     portrait: { x: 50, y: 4, width: 32, height: 11, anchor: "top" },
-    landscape: { x: 70, y: 18.5, width: 20, height: 21, anchor: "middle" },
+    landscape: { x: 73, y: 19, width: 20, height: 21, anchor: "middle" },
   }), [logo]);
 
   const configTitle = useMemo(() => ({
     style: { color: "white", fontWeight: "bold", flexDirection: "column" },
     portrait: { x: 50, y: 21.5, width: 90, height: 0, anchor: "middle", fontSize: 6 },
-    landscape: { x: 70.5, y: 51, width: 40, height: 40, anchor: "middle", fontSize: 3 },
+    landscape: { x: 73, y: 55, width: 40, height: 50, anchor: "middle", fontSize: 3 },
   }), []);
 
   const configCta = useMemo(() => ({
     onPressStart: () => useRedirectMIPEvent(mraid), // mantén tu handler original
     style: { borderRadius:"15px", backgroundColor: ctaColor, fontWeight: "bold", color: ctaTextColor, zIndex: 50 },
-    portrait: { x: 50, y: 94, width: 42, height: 6, anchor: "bottom", fontSize: 5, animate: pendule },
-    landscape: { x: 70, y: 86, width: 27, height: 11, anchor: "middle", fontSize: 3, animate: pendule },
+    portrait: { x: 50, y: 96, width: 42, height: 6, anchor: "bottom", fontSize: 5, animate: pendule },
+    landscape: { x: 73, y: 86.4, width: 27, height: 11, anchor: "middle", fontSize: 3, animate: pendule },
     loop: true,
     controlsAnimate: "play",
   }), [mraid, ctaColor, ctaTextColor, pendule]);

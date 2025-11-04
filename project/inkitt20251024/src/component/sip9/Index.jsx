@@ -1,6 +1,6 @@
 import React from "react";
 import Concept from "../main/concept5/Index";
-import imageLogoGalatea from "../../../assets/image/sip5/logoGalatea.png";
+import imageLogoGalatea from "../../../assets/image/logoGalatea.webp";
 import imageIcoGalatea from "../../../assets/image/sip5/icoGalatea.png";
 import Inter from "../../../../../src/assets/font/Inter/Inter-VariableFont_opsz,wght.ttf";
 import FontChange from "../../../../../src/component/FontChange";

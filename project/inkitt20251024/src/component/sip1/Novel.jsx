@@ -7,6 +7,7 @@ import React from "react";
  */
 export default function Novel() {
   return (
+
     <>
       <h2 className="text-2xl font-bold text-neutral-900 text-center">Capítulo 1.</h2>
       <div className="space-y-2 mt-4 select-none">

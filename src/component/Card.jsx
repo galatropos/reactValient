@@ -19,17 +19,19 @@ const defaultPercent = {
   y: 0,
   anchor: "left-top",
   fontSize: 10,
-  rotate: 0,    // Z
-  rotateX: 0,   // 3D X
-  rotateY: 0,   // 3D Y
+  rotate: 0,
+  rotateX: 0,
+  rotateY: 0,
   opacity: 1,
   scale: 1,
   scaleX: 1,
   scaleY: 1,
-  perspective: 800, // px
+  perspective: 800,
   hidden: false,
   blur: 0,
   backdropBlur: 0,
+  // ⬇️ Default transform origin (puedes override en portrait/landscape)
+  transformOrigin: "center center",
 };
 
 const Card = forwardRef(function Card(
@@ -51,17 +53,25 @@ const Card = forwardRef(function Card(
     onPointerLeave,
     onPointerCancel,
 
-    // Eventos de “press”
+    // Press básicos
     onPressStart,
     onPressEndInside,
     onPressEndOutside,
-    onPressStartLeave, // sale del card mientras sigue presionando (si inició dentro)
+    onPressStartLeave,
 
-    // Detección global durante un press iniciado en cualquier parte
-    onPressMoveEnter, // entra al rect del card sin soltar
-    onPressMoveLeave, // sale del rect del card sin soltar
+    // Press global
+    onPressMoveEnter,
+    onPressMoveLeave,
 
     onStepChange,
+
+    // Drag para mover carta
+    draggable = false,
+    dragAxis = "both",            // "both" | "x" | "y"
+    onPressDragStart,             // ({..., status:"start"})
+    onPressDrag,                  // ({..., status:"start"|"move"|"leave"})
+    onPressDragEnd,               // ({..., status:"leave"})
+    dragDirThresholdPct = 1.5,    // % para decidir direcciones
   },
   ref
 ) {
@@ -73,7 +83,6 @@ const Card = forwardRef(function Card(
       : true
   );
 
-  // 🔑 Memo: evita crear objetos nuevos en cada render
   const mode = isPortrait ? portrait : landscape;
 
   const baseForHook = useMemo(
@@ -104,19 +113,25 @@ const Card = forwardRef(function Card(
 
   const myDiv = useRef(null);
 
-  // Refs de gesto
+  // Refs gesto
   const activePointerIdRef = useRef(null);
   const isPressingRef = useRef(false);
-  const leftFiredRef = useRef(false);           // evita múltiples onPressStartLeave
-  const downRectRef = useRef(null);             // rect al iniciar press (si inicia dentro)
-  const enteredDuringPressRef = useRef(false);  // estado "estoy dentro" durante press global
-  const endFiredRef = useRef(false);            // evita doble onPressEnd* (local + global)
+  const leftFiredRef = useRef(false);
+  const downRectRef = useRef(null);
+  const enteredDuringPressRef = useRef(false);
+  const endFiredRef = useRef(false);
+
+  // Drag
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragDeltaPct, setDragDeltaPct] = useState({ x: 0, y: 0 });
+  const [dragBasePct, setDragBasePct] = useState({ x: 0, y: 0 });
+  const startXYRef = useRef({ x: 0, y: 0 });
+  const startCardXYPercentRef = useRef({ x: 0, y: 0 });
 
   useImperativeHandle(ref, () => myDiv.current, []);
-
   const element = useElement();
 
-  // Registro en contexto por id
+  // Registro en contexto
   useEffect(() => {
     if (myDiv.current && id) {
       element.setElement((prev) => ({
@@ -131,27 +146,51 @@ const Card = forwardRef(function Card(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Cambios de orientación
+  // Orientación
   useEffect(() => {
-    const onResize = () => {
-      setIsPortrait(window.innerWidth <= window.innerHeight);
-    };
+    const onResize = () => setIsPortrait(window.innerWidth <= window.innerHeight);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // --- Listeners GLOBALes (detectan entrar/salir y suelta aunque el press comience fuera) ---
+  // Helpers de dirección
+  const dirFromDelta = (dxPct, dyPct, thr) => {
+    const horiz = Math.abs(dxPct) >= thr ? (dxPct > 0 ? "right" : "left") : null;
+    const vert  = Math.abs(dyPct) >= thr ? (dyPct > 0 ? "down"  : "up")   : null;
+    const labels = [];
+    if (horiz) labels.push(horiz);
+    if (vert)  labels.push(vert);
+    const labelsEs = labels.map((d) =>
+      d === "right" ? "derecha" : d === "left" ? "izquierda" : d === "up" ? "arriba" : "abajo"
+    );
+    return { horizontal: horiz, vertical: vert, labels, labelsEs };
+  };
+
+  const dirFromCenter = (xPct, yPct, thr) => {
+    const dxC = xPct - 50;
+    const dyC = yPct - 50;
+    return dirFromDelta(dxC, dyC, thr);
+  };
+
+  const dominantFromCenter = (xPct, yPct, thr) => {
+    const dxC = xPct - 50;
+    const dyC = yPct - 50;
+    const ax = Math.abs(dxC);
+    const ay = Math.abs(dyC);
+    if (ax < thr && ay < thr) return null;
+    if (ax >= ay) return dxC > 0 ? "right" : "left";
+    return dyC > 0 ? "down" : "up";
+  };
+
+  // Global listeners
   useEffect(() => {
     const handleGlobalPointerDown = (e) => {
-      // Si ya seguimos un puntero, ignora otros
       if (activePointerIdRef.current != null) return;
-      // Solo el botón primario en mouse
       if (e.pointerType === "mouse" && e.button !== 0) return;
-
       activePointerIdRef.current = e.pointerId;
       isPressingRef.current = true;
       leftFiredRef.current = false;
-      enteredDuringPressRef.current = false; // iniciamos "fuera" por defecto
+      enteredDuringPressRef.current = false;
       downRectRef.current = null;
       endFiredRef.current = false;
     };
@@ -160,7 +199,6 @@ const Card = forwardRef(function Card(
       if (!isPressingRef.current || activePointerIdRef.current !== e.pointerId) return;
       const rect = myDiv.current?.getBoundingClientRect();
       if (!rect) return;
-
       const TOL = 0;
       const inside =
         e.clientX >= rect.left - TOL &&
@@ -168,13 +206,10 @@ const Card = forwardRef(function Card(
         e.clientY >= rect.top - TOL &&
         e.clientY <= rect.bottom + TOL;
 
-      // transición fuera -> dentro (primera vez)
       if (inside && !enteredDuringPressRef.current) {
         enteredDuringPressRef.current = true;
         onPressMoveEnter?.(e);
-      }
-      // transición dentro -> fuera
-      else if (!inside && enteredDuringPressRef.current) {
+      } else if (!inside && enteredDuringPressRef.current) {
         enteredDuringPressRef.current = false;
         onPressMoveLeave?.(e);
       }
@@ -183,7 +218,7 @@ const Card = forwardRef(function Card(
     const handleGlobalPointerUp = (e) => {
       if (activePointerIdRef.current !== e.pointerId) return;
 
-      // Antes de limpiar refs, decide si terminó dentro o fuera
+      // end inside/outside
       const rect = myDiv.current?.getBoundingClientRect();
       if (rect) {
         const TOL = 0;
@@ -193,19 +228,62 @@ const Card = forwardRef(function Card(
           e.clientY >= rect.top - TOL &&
           e.clientY <= rect.bottom + TOL;
 
-        // ✅ Si el press comenzó fuera pero suelta DENTRO de este Card => onPressEndInside
         if (inside && !endFiredRef.current) {
           endFiredRef.current = true;
           onPressEndInside?.(e);
-        }
-        // Si en algún momento estuvo dentro y suelta FUERA => onPressEndOutside
-        else if (!inside && enteredDuringPressRef.current && !endFiredRef.current) {
+        } else if (!inside && enteredDuringPressRef.current && !endFiredRef.current) {
           endFiredRef.current = true;
           onPressEndOutside?.(e);
         }
       }
 
-      // Limpieza global
+      // Drag end (commit) + status: "leave"
+      if (draggable && isDragging) {
+        const newBase = {
+          x: dragBasePct.x + dragDeltaPct.x,
+          y: dragBasePct.y + dragDeltaPct.y,
+        };
+        setDragBasePct(newBase);
+        setDragDeltaPct({ x: 0, y: 0 });
+        setIsDragging(false);
+
+        const endX = currentXPercent(newBase);
+        const endY = currentYPercent(newBase);
+        const vFromStart = dirFromDelta(
+          endX - startCardXYPercentRef.current.x,
+          endY - startCardXYPercentRef.current.y,
+          dragDirThresholdPct
+        );
+        const vFromCenter = dirFromCenter(endX, endY, dragDirThresholdPct);
+        const domFromCenter = dominantFromCenter(endX, endY, dragDirThresholdPct);
+
+        // ➕ Notifica también por onPressDrag con status:"leave"
+        onPressDrag?.({
+          status: "leave",
+          xPercent: endX,
+          yPercent: endY,
+          deltaPercent: { ...dragDeltaPct },
+          directionFromStart: vFromStart,
+          directionFromCenter: vFromCenter,
+          dominantFromCenter: domFromCenter,
+          container: { width: containerWidth || 0, height: containerHeight || 0 },
+          nativeEvent: e,
+        });
+
+        onPressDragEnd?.({
+          status: "leave",
+          xPercent: endX,
+          yPercent: endY,
+          deltaPercent: { ...dragDeltaPct },
+          directionFromStart: vFromStart,
+          directionFromCenter: vFromCenter,
+          dominantFromCenter: domFromCenter,
+          container: { width: containerWidth || 0, height: containerHeight || 0 },
+          nativeEvent: e,
+        });
+      }
+
+      // cleanup
       activePointerIdRef.current = null;
       isPressingRef.current = false;
       leftFiredRef.current = false;
@@ -225,9 +303,23 @@ const Card = forwardRef(function Card(
       window.removeEventListener("pointerup", handleGlobalPointerUp);
       window.removeEventListener("pointercancel", handleGlobalPointerUp);
     };
-  }, [onPressMoveEnter, onPressMoveLeave, onPressEndInside, onPressEndOutside]);
+  }, [
+    onPressMoveEnter,
+    onPressMoveLeave,
+    onPressEndInside,
+    onPressEndOutside,
+    draggable,
+    isDragging,
+    dragBasePct.x,
+    dragBasePct.y,
+    dragDeltaPct.x,
+    dragDeltaPct.y,
+    containerWidth,
+    containerHeight,
+    dragDirThresholdPct,
+  ]);
 
-  // --- Normalización de escalas (delta vs absoluto) ---
+  // Anim base
   const sv = sequenceValue || {};
   const base = baseForHook;
 
@@ -237,15 +329,14 @@ const Card = forwardRef(function Card(
 
   const asDeltaOrAbsolute = (val, baseVal) => {
     if (val == null) return baseVal;
-    return Math.abs(val) < 0.5 ? baseVal + val : val;
+    return Math.abs(val) < 0.5 ? baseVal + val : val; // delta si |val| < .5
   };
 
   const normScale  = asDeltaOrAbsolute(sv.scale,  baseScale);
   const normScaleX = asDeltaOrAbsolute(sv.scaleX, baseScaleX);
   const normScaleY = asDeltaOrAbsolute(sv.scaleY, baseScaleY);
 
-  // Mezcla final
-  const current = {
+  const currentBase = {
     ...base,
     ...sv,
     scale:  normScale,
@@ -253,45 +344,59 @@ const Card = forwardRef(function Card(
     scaleY: normScaleY,
   };
 
-  // No cortamos hooks: ocultamos hasta tener medidas
+  // Drag aplicado
+  const dragOffset = {
+    x: dragBasePct.x + dragDeltaPct.x,
+    y: dragBasePct.y + dragDeltaPct.y,
+  };
+
+  const currentXPercent = (overrideBase = dragBasePct) =>
+    currentBase.x + overrideBase.x + (isDragging ? dragDeltaPct.x : 0);
+  const currentYPercent = (overrideBase = dragBasePct) =>
+    currentBase.y + overrideBase.y + (isDragging ? dragDeltaPct.y : 0);
+
+  // Layout
   const hasMeasures = Boolean(containerWidth && containerHeight);
   const safeW = containerWidth || 1;
   const safeH = containerHeight || 1;
 
-  const widthPx = (current.width / 100) * safeW;
-  const heightPx = (current.height / 100) * safeH;
+  const widthPx = (currentBase.width / 100) * safeW;
+  const heightPx = (currentBase.height / 100) * safeH;
 
   const fontSizePercent =
-    typeof current.fontSize === "number" ? current.fontSize : defaultPercent.fontSize;
+    typeof currentBase.fontSize === "number" ? currentBase.fontSize : defaultPercent.fontSize;
   const fontSizePx = (fontSizePercent / 100) * safeW;
 
+  const effectiveX = currentBase.x + dragOffset.x;
+  const effectiveY = currentBase.y + dragOffset.y;
+
   const { left, top } = getPositionWithAnchor(
-    current.x,
-    current.y,
+    effectiveX,
+    effectiveY,
     widthPx,
     heightPx,
     safeW,
     safeH,
-    current.anchor || "left-top"
+    currentBase.anchor || "left-top"
   );
 
-  const p    = current.perspective ?? null;
-  const rX   = current.rotateX ?? 0;
-  const rY   = current.rotateY ?? 0;
-  const rZ   = current.rotate  ?? 0;
+  const p  = currentBase.perspective ?? null;
+  const rX = currentBase.rotateX ?? 0;
+  const rY = currentBase.rotateY ?? 0;
+  const rZ = currentBase.rotate  ?? 0;
 
   const transforms = [];
   if (p) transforms.push(`perspective(${p}px)`);
-  transforms.push(`scale(${current.scale})`);
-  transforms.push(`scaleX(${current.scaleX})`);
-  transforms.push(`scaleY(${current.scaleY})`);
+  transforms.push(`scale(${currentBase.scale})`);
+  transforms.push(`scaleX(${currentBase.scaleX})`);
+  transforms.push(`scaleY(${currentBase.scaleY})`);
   transforms.push(`rotateX(${rX}deg)`);
   transforms.push(`rotateY(${rY}deg)`);
   transforms.push(`rotate(${rZ}deg)`);
 
   const { filter: styleFilter, backdropFilter: styleBackdropFilter, ...restStyle } = style || {};
-  const blurPxRaw = Number.isFinite(current.blur) ? current.blur : 0;
-  const backdropBlurPxRaw = Number.isFinite(current.backdropBlur) ? current.backdropBlur : 0;
+  const blurPxRaw = Number.isFinite(currentBase.blur) ? currentBase.blur : 0;
+  const backdropBlurPxRaw = Number.isFinite(currentBase.backdropBlur) ? currentBase.backdropBlur : 0;
   const blurPx = Math.max(0, blurPxRaw);
   const backdropBlurPx = Math.max(0, backdropBlurPxRaw);
 
@@ -318,14 +423,20 @@ const Card = forwardRef(function Card(
     left: `${left}px`,
     top: `${top}px`,
     fontSize: `${fontSizePx}px`,
-    display: current.hidden ? "none" : "flex",
+    display: currentBase.hidden ? "none" : "flex",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     textAlign: "center",
     transform: transforms.join(" "),
-    opacity: current.opacity,
-    transformOrigin: restStyle?.transformOrigin || "center center",
+    opacity: currentBase.opacity,
+
+    // ⬇️ Usa transformOrigin del modo activo (portrait/landscape) > style > default
+    transformOrigin:
+      currentBase.transformOrigin ??
+      restStyle?.transformOrigin ??
+      "center center",
+
     transformStyle: "preserve-3d",
     perspective: 800,
     backfaceVisibility: "visible",
@@ -346,20 +457,57 @@ const Card = forwardRef(function Card(
   const isPointInsideRect = (x, y, rect) =>
     x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
-  // --- Handlers locales (cuando el press inicia dentro del card) ---
+  // Handlers locales
   const handlePointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
     activePointerIdRef.current = e.pointerId;
     isPressingRef.current = true;
     leftFiredRef.current = false;
-    enteredDuringPressRef.current = true; // si inició dentro, ya estamos "dentro"
+    enteredDuringPressRef.current = true;
     downRectRef.current = myDiv.current?.getBoundingClientRect() ?? null;
     endFiredRef.current = false;
 
-    try {
-      myDiv.current?.setPointerCapture?.(e.pointerId);
-    } catch (_) {}
+    if (draggable) {
+      setIsDragging(true);
+      startXYRef.current = { x: e.clientX, y: e.clientY };
+      startCardXYPercentRef.current = {
+        x: currentBase.x + dragBasePct.x,
+        y: currentBase.y + dragBasePct.y,
+      };
+      setDragDeltaPct({ x: 0, y: 0 });
+
+      const startX = startCardXYPercentRef.current.x;
+      const startY = startCardXYPercentRef.current.y;
+      const vFromCenter = dirFromCenter(startX, startY, dragDirThresholdPct);
+      const domFromCenter = dominantFromCenter(startX, startY, dragDirThresholdPct);
+
+      // onPressDrag: status "start"
+      onPressDrag?.({
+        status: "start",
+        xPercent: startX,
+        yPercent: startY,
+        deltaPercent: { x: 0, y: 0 },
+        directionFromStart: { horizontal: null, vertical: null, labels: [], labelsEs: [] },
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+
+      onPressDragStart?.({
+        status: "start",
+        xPercent: startX,
+        yPercent: startY,
+        directionFromStart: { horizontal: null, vertical: null, labels: [], labelsEs: [] },
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+    }
+
+    try { myDiv.current?.setPointerCapture?.(e.pointerId); } catch (_) {}
 
     onPressStart?.(e);
     onPointerDown?.(e);
@@ -378,15 +526,45 @@ const Card = forwardRef(function Card(
       e.clientY >= rect.top - TOL &&
       e.clientY <= rect.bottom + TOL;
 
-    // Si inició dentro y sale por primera vez
     if (!inside && !leftFiredRef.current) {
       leftFiredRef.current = true;
       onPressStartLeave?.(e);
-      // coherencia con callbacks globales
       if (enteredDuringPressRef.current) {
         enteredDuringPressRef.current = false;
         onPressMoveLeave?.(e);
       }
+    }
+
+    if (draggable && isDragging) {
+      const dxPx = e.clientX - startXYRef.current.x;
+      const dyPx = e.clientY - startXYRef.current.y;
+
+      let dxPct = (dxPx / (containerWidth || 1)) * 100;
+      let dyPct = (dyPx / (containerHeight || 1)) * 100;
+
+      if (dragAxis === "x") dyPct = 0;
+      if (dragAxis === "y") dxPct = 0;
+
+      setDragDeltaPct({ x: dxPct, y: dyPct });
+
+      const curX = startCardXYPercentRef.current.x + dxPct;
+      const curY = startCardXYPercentRef.current.y + dyPct;
+
+      const vFromStart  = dirFromDelta(dxPct, dyPct, dragDirThresholdPct);
+      const vFromCenter = dirFromCenter(curX, curY, dragDirThresholdPct);
+      const domFromCenter = dominantFromCenter(curX, curY, dragDirThresholdPct);
+
+      onPressDrag?.({
+        status: "move",
+        xPercent: curX,
+        yPercent: curY,
+        deltaPercent: { x: dxPct, y: dyPct },
+        directionFromStart: vFromStart,
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
     }
   };
 
@@ -407,9 +585,52 @@ const Card = forwardRef(function Card(
       }
     }
 
-    try {
-      myDiv.current?.releasePointerCapture?.(e.pointerId);
-    } catch (_) {}
+    if (draggable && isDragging) {
+      const newBase = {
+        x: dragBasePct.x + dragDeltaPct.x,
+        y: dragBasePct.y + dragDeltaPct.y,
+      };
+      setDragBasePct(newBase);
+      setDragDeltaPct({ x: 0, y: 0 });
+      setIsDragging(false);
+
+      const endX = currentXPercent(newBase);
+      const endY = currentYPercent(newBase);
+      const vFromStart  = dirFromDelta(
+        endX - startCardXYPercentRef.current.x,
+        endY - startCardXYPercentRef.current.y,
+        dragDirThresholdPct
+      );
+      const vFromCenter = dirFromCenter(endX, endY, dragDirThresholdPct);
+      const domFromCenter = dominantFromCenter(endX, endY, dragDirThresholdPct);
+
+      // onPressDrag: status "leave"
+      onPressDrag?.({
+        status: "leave",
+        xPercent: endX,
+        yPercent: endY,
+        deltaPercent: { ...dragDeltaPct },
+        directionFromStart: vFromStart,
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+
+      onPressDragEnd?.({
+        status: "leave",
+        xPercent: endX,
+        yPercent: endY,
+        deltaPercent: { ...dragDeltaPct },
+        directionFromStart: vFromStart,
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+    }
+
+    try { myDiv.current?.releasePointerCapture?.(e.pointerId); } catch (_) {}
     activePointerIdRef.current = null;
     isPressingRef.current = false;
     leftFiredRef.current = false;
@@ -421,14 +642,57 @@ const Card = forwardRef(function Card(
   const handlePointerCancel = (e) => {
     onPointerCancel?.(e);
 
+    if (draggable && isDragging) {
+      const newBase = {
+        x: dragBasePct.x + dragDeltaPct.x,
+        y: dragBasePct.y + dragDeltaPct.y,
+      };
+      setDragBasePct(newBase);
+      setDragDeltaPct({ x: 0, y: 0 });
+      setIsDragging(false);
+
+      const endX = currentXPercent(newBase);
+      const endY = currentYPercent(newBase);
+      const vFromStart  = dirFromDelta(
+        endX - startCardXYPercentRef.current.x,
+        endY - startCardXYPercentRef.current.y,
+        dragDirThresholdPct
+      );
+      const vFromCenter = dirFromCenter(endX, endY, dragDirThresholdPct);
+      const domFromCenter = dominantFromCenter(endX, endY, dragDirThresholdPct);
+
+      // onPressDrag: status "leave"
+      onPressDrag?.({
+        status: "leave",
+        xPercent: endX,
+        yPercent: endY,
+        deltaPercent: { ...dragDeltaPct },
+        directionFromStart: vFromStart,
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+
+      onPressDragEnd?.({
+        status: "leave",
+        xPercent: endX,
+        yPercent: endY,
+        deltaPercent: { ...dragDeltaPct },
+        directionFromStart: vFromStart,
+        directionFromCenter: vFromCenter,
+        dominantFromCenter: domFromCenter,
+        container: { width: containerWidth || 0, height: containerHeight || 0 },
+        nativeEvent: e,
+      });
+    }
+
     if (!endFiredRef.current && isPressingRef.current && activePointerIdRef.current === e.pointerId) {
       endFiredRef.current = true;
       onPressEndOutside?.(e);
     }
 
-    try {
-      myDiv.current?.releasePointerCapture?.(e.pointerId);
-    } catch (_) {}
+    try { myDiv.current?.releasePointerCapture?.(e.pointerId); } catch (_) {}
     activePointerIdRef.current = null;
     isPressingRef.current = false;
     leftFiredRef.current = false;
