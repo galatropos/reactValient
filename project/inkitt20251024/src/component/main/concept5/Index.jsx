@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "../../../../assets/style/concept5.css";
 import Card from "../../../../../../src/component/Card";
 import image1 from "../../../../assets/image/concepto5/1.webp";
@@ -10,11 +10,11 @@ import animateBlurCombo from "../../../../../../src/utils/animate/animateBlurBac
 import audioClick from "../../../../assets/audio/click.mp3";
 import useAudio from "../../../../../../src/hook/useAudio";
 import audioSountrack from "../../../../assets/audio/sountrack1.mp3";
- import Found from "./found";
+import Found from "./found";
+import WaveSpan from "../../../../../../src/component/WaveSpan";
 
 const steps = [
   {
-
     background: image1,
     title: "Run the bath",
     xpc: 64,
@@ -27,7 +27,6 @@ const steps = [
     ylt: 36,
   },
   {
-
     background: image2,
     title: "Light the candle",
     xpc: 44,
@@ -40,7 +39,6 @@ const steps = [
     ylt: 10,
   },
   {
-
     background: image3,
     title: "Pour th wine",
     xpc: 68,
@@ -54,41 +52,53 @@ const steps = [
   },
 ];
 
-const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,image=null,mraid,backgroundColor ,text}) => {
+const Index = ({
+  ico,
+  video = null,
+  logo,
+  footerColor,
+  ctaText,
+  footerText,
+  ctaColor,
+  image = null,
+  mraid,
+  backgroundColor,
+  text,
+}) => {
   const [next, setNext] = useState(0);
   document.body.style.backgroundColor = backgroundColor;
- 
-  const finish=steps.length<=next;
 
-  useEffect(()=>{startSountrack.automatic();startSountrack.setLoop(true);},[])
-  let startSountrack=useAudio(audioSountrack);
+  const finish = steps.length <= next;
 
   useEffect(() => {
-    if (video&&finish) {
-      startSountrack.stop();
-      
-    }
-  
-  }, [finish])
-  
+    startSountrack.automatic();
+    startSountrack.setLoop(true);
+  }, []);
+  let startSountrack = useAudio(audioSountrack);
 
-  const [controller,setController]=React.useState("stop");
-  const startClick=useAudio(audioClick);
-  
-  const opacity=finish?0:1
- 
-  const {  background, title, xpc, ypc, xlc, ylc, xpt, ypt, xlt, ylt } = steps[next]||{};
+  useEffect(() => {
+    if (video && finish) {
+      startSountrack.stop();
+    }
+  }, [finish]);
+
+  const [controller, setController] = React.useState("stop");
+  const startClick = useAudio(audioClick);
+
+  const opacity = finish ? 0 : 1;
+
+  const { background, title, xpc, ypc, xlc, ylc, xpt, ypt, xlt, ylt } =
+    steps[next] || {};
   const onPressEndInside = () => {
     startClick.play();
-    setController("play")
-    setTimeout(()=>{
-      setNext(e=>e+1)
-    },100)
-    setTimeout(()=>{
-      setController("stop")
-    },200)
-    
-  }
+    setController("play");
+    setTimeout(() => {
+      setNext((e) => e + 1);
+    }, 100);
+    setTimeout(() => {
+      setController("stop");
+    }, 200);
+  };
   const configImage = {
     style: {
       backgroundImage: `url(${background})`,
@@ -103,8 +113,8 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
       width: 95,
       height: 88.1,
       anchor: "top",
-      
-      animate:animateBlurCombo(),
+
+      animate: animateBlurCombo(),
     },
     landscape: {
       x: 1,
@@ -114,7 +124,7 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
       anchor: "left-top",
       rotate: 0,
       scale: 1,
-      animate:animateBlurCombo(),
+      animate: animateBlurCombo(),
     },
     loop: true,
     controlsAnimate: controller,
@@ -122,11 +132,7 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
 
   const configCircle = {
     style: {
-      background: "rgba(255,255,255,0.4)",
-      borderRadius: "50%",
-      outline: "10px solid red",
-      padding: 20,
-
+      opacity: 0,
     },
     portrait: {
       x: xpc,
@@ -150,7 +156,6 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
       color: "white",
       fontWeight: "bold",
       flexDirection: "column",
-
     },
     portrait: {
       x: xpt,
@@ -169,12 +174,10 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
       scale: 1,
       fontSize: 3.5,
     },
-    children:title,
+    children: title,
   };
   const configEvent = {
-    style: {
-
-    },
+    style: {},
     portrait: {
       x: 50,
       y: 50,
@@ -188,30 +191,56 @@ const Index = ({ ico, video = null,logo,footerColor,ctaText,footerText,ctaColor,
       width: 300,
       height: 300,
       anchor: "middle",
-      
     },
-    onPressEndInside:()=>onPressEndInside()
+    onPressEndInside: () => onPressEndInside(),
   };
-
-
-
 
   return (
     <>
-    <span style={{display:finish?'none':'block'}}>
-      <Card {...configImage} />
-      <Card {...configCircle} />
-      <Card {...configTitle} />
-      <Found  ctaText={ctaText} logo={logo} footerText={footerText} opacity={opacity} finish={finish} ico={ico} ctaColor={ctaColor} footerColor={footerColor} />
-    </span>
+      <span style={{ display: finish ? "none" : "block" }}>
+        <Card {...configImage} />
+        <Card {...configCircle}>
+          <WaveSpan
+            controller={finish ? "stop" : "play"}
+            size={35}
+            mode="outline"
+          />
+        </Card>
+        <Card {...configTitle} />
+        <Found
+          ctaText={ctaText}
+          logo={logo}
+          footerText={footerText}
+          opacity={opacity}
+          finish={finish}
+          ico={ico}
+          ctaColor={ctaColor}
+          footerColor={footerColor}
+        />
+      </span>
 
-      <Card {...configEvent}  />
-      {
-
-      video?<Video finish={finish} logo={logo} {...video} cta={ctaText}  ctaColor={ctaColor} mraid={mraid} />:
-      <Image backgroundColor={backgroundColor} text={text} finish={finish} logo={logo} {...image} cta={ctaText}  ctaColor={ctaColor}  mraid={mraid} />
-      }
-
+      <Card {...configEvent} />
+      {video ? (
+        <Video
+          finish={finish}
+          logo={logo}
+          {...video}
+          cta={ctaText}
+          ctaColor={ctaColor}
+          mraid={mraid}
+        />
+      ) : (
+        <Image
+          backgroundColor={backgroundColor}
+          text={text}
+          finish={finish}
+          logo={logo}
+          {...image}
+          cta={ctaText}
+          ctaColor={ctaColor}
+          mraid={mraid}
+        />
+      )}
     </>
   );
 };

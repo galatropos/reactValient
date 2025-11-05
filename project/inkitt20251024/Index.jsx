@@ -21,7 +21,7 @@ inkitt_codan_mip_20251024_03_ecomm_04 mip18
 inkitt_codan_mip_20251024_04_ecomm_04 mip19
 inkitt_codan_mip_20251024_05_ecomm_04 mip20
 */
-import Sip from "./src/component/mip01/Index";
+import Sip from "./src/component/mip05/Index";
 import "./assets/style/sip.css";
 
 function Index() {

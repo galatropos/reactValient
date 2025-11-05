@@ -1,91 +1,61 @@
-// Select.jsx
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState, memo } from "react";
 import Card from "../../../../../../src/component/Card";
 import audioClick from "../../../../assets/audio/click.mp3";
 import useAudio from "../../../../../../src/hook/useAudio";
 
-
-const Select = ({
+function Select({
   anchor = "middle",
-  xp = 52, yp = 52, xl = 20, yl = 10,
+  xp = 52,
+  yp = 52,
+  xl = 20,
+  yl = 10,
   handleOn = "select",
-  br=0,bl=0,bt=0,bb=0,
+  br = 0,
+  bl = 0,
+  bt = 0,
+  bb = 0,
   setActive,
   setActiveReady,
-  id
-}) => {
+  id,
+}) {
   const startClick = useAudio(audioClick);
-
-
   const [activado, setActivado] = useState(false);
-  const [controller, setController] = useState("stop");
-  const [runId, setRunId] = useState(0);      // fuerza re-mount del Card de la mano
-  const [handShown, setHandShown] = useState(false); // 🔑 mostrar/ocultar mano por React
-  const watchdogRef = useRef(null);
 
-  // espejo del controller para lecturas síncronas
-  const controllerRef = useRef(controller);
-  useEffect(() => { controllerRef.current = controller; }, [controller]);
+  // Sincroniza el array de "ready" con este id
+  useEffect(() => {
+    setActiveReady((arr) => {
+      const next = Array.isArray(arr) ? arr.slice() : [];
+      next[id] = activado;
+      return next;
+    });
+  }, [activado, id, setActiveReady]);
 
-useEffect(()=>{
-
-    setActiveReady(e=>{
-      const newArray=e.map(e=>e)
-      newArray[id]=activado
-      return newArray
-    }
-  )
-},[activado,id])
-
-  // ---------------------------------------
-
-
-
-
-  // ---------- Disparo seguro: re-mount + restart ----------
+  // Gate anti rebote
   const pressGateRef = useRef(false);
   const releaseGate = () => {
-    if (typeof queueMicrotask === "function") queueMicrotask(() => { pressGateRef.current = false; });
-    else setTimeout(() => { pressGateRef.current = false; }, 0);
+    (typeof queueMicrotask === "function" ? queueMicrotask : (fn) => setTimeout(fn, 0))(() => {
+      pressGateRef.current = false;
+    });
   };
 
-  const restartAnimation = () => {
-    // Mostrar mano y re-montarla con key distinta
-    setHandShown(true);
-    setRunId((n) => n + 1);
-    // Restart duro del controlador
-    setController("stop");
-    requestAnimationFrame(() => setController("play"));
-  };
+  const handlePressEndInside = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      if (pressGateRef.current) return;
+      pressGateRef.current = true;
 
-  const handlePressEndInside = useCallback((e) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
+      startClick.play();
+      setActivado((prev) => !prev);
+      setActive(false);
 
-    if (pressGateRef.current) return;
-    pressGateRef.current = true;
+      releaseGate();
+    },
+    [setActive, startClick]
+  );
 
-    startClick.play();
+  const borderRadius = `${br}px ${bl}px ${bt}px ${bb}px`;
 
-    // Toggle del overlay directamente por click (determinista)
-    setActivado(prev => !prev);
-    setActive(false);
-
-    // Reinicio duro de la mano (evita freeze)
-    restartAnimation();
-
-    // Watchdog: si no llega el paso final, detenemos y ocultamos la mano
-    clearTimeout(watchdogRef.current);
-    watchdogRef.current = setTimeout(() => {
-      setController("stop");
-      setHandShown(false);  // 🔥 garantizamos que no quede visible
-    }, 5600);
-
-    releaseGate();
-  }, [startClick]);
-  // --------------------------------------------------------
-
-  // Área seleccionable
   const configSelect = {
     style: {
       color: "white",
@@ -94,47 +64,44 @@ useEffect(()=>{
       outline: "8px solid white",
       backgroundColor: `rgba(255,255,255,${activado ? 0.5 : 0})`,
       zIndex: 5,
-      borderRadius:br+"px "+bl+"px "+bt+"px "+bb+"px"
+      borderRadius,
     },
     portrait: { x: xp, y: yp, width: 32.5, height: 15.9, anchor },
-    landscape: { x: xl, y: yl, width: 13.2, height: 23, anchor, scale: 1, fontSize: 3.5 },
+    landscape: { x: xl, y: yl, width: 13.2, height: 23, anchor, fontSize: 3.5 },
   };
 
-
-  // Quién maneja el gesto
+  // ¿Quién maneja el gesto?
   const selectGetsHandler = handleOn === "select" || handleOn === "both";
 
-  // ⚙️ Si el usuario puso handleOn="hand" pero la mano está oculta,
-  //    redirigimos el gesto al select para no perder interacción.
-  const effectiveSelectGetsHandler =
-    selectGetsHandler || (!handShown && handleOn === "hand");
-
   return (
-    <>
-      <Card
-        key="select"
-        {...configSelect}
-        onPressEndInside={effectiveSelectGetsHandler ? handlePressEndInside : undefined}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 10,
-            top: 10,
-            background: "#46B5FF",
-            outline: "3px solid white",
-            width: "50px",
-            height: "50px",
-            borderRadius: "100%",
-            display: activado ? "block" : "none",
-            pointerEvents: "none",
-          }}
-        />
-      </Card>
-
-
-    </>
+    <Card {...configSelect} onPressEndInside={selectGetsHandler ? handlePressEndInside : undefined}>
+      <div
+        style={{
+          position: "absolute",
+          left: 10,
+          top: 10,
+          background: "#46B5FF",
+          outline: "3px solid white",
+          width: 50,
+          height: 50,
+          borderRadius: "100%",
+          display: activado ? "block" : "none",
+          pointerEvents: "none",
+        }}
+      />
+    </Card>
   );
-};
+}
 
-export default Select;
+export default memo(Select, (a, b) =>
+  a.id === b.id &&
+  a.xp === b.xp &&
+  a.yp === b.yp &&
+  a.xl === b.xl &&
+  a.yl === b.yl &&
+  a.anchor === b.anchor &&
+  a.br === b.br &&
+  a.bl === b.bl &&
+  a.bt === b.bt &&
+  a.bb === b.bb
+);

@@ -8,7 +8,7 @@ import Concept from "../main/concept3/Index";
 
 import React from "react";
 import imageLogoGalatea from "../../../assets/image/logoGalatea.webp";
-import imageIcoGalatea from "../../../assets/image/sip5/icoGalatea.png";
+import imageIcoGalatea from "../../../assets/image/sip5/icoGalatea.webp";
 import Inter from "../../../../../src/assets/font/Inter/Inter-VariableFont_opsz,wght.ttf";
 import FontChange from "../../../../../src/component/FontChange";
 import novel from "../../../../../src/assets/font/Noto_Serif/NotoSerif-VariableFont_wdth,wght.ttf";

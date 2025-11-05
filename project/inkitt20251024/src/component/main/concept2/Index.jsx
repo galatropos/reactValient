@@ -1,46 +1,54 @@
-import React, {  useEffect, useState } from "react";
+import React, { useEffect, useState, memo } from "react";
 import Block1 from "./Block1";
 import Block2 from "./Block2";
 import audioSountrack from "../../../../assets/audio/sountrack1.mp3";
 import useAudio from "../../../../../../src/hook/useAudio";
 import Card from "../../../../../../src/component/Card";
 
-const Index = ({ imageMain, text, logo, title, ctaColor, ctaText, video,mraid,backgroundColor,titleBook }) => {
-  document.body.style.backgroundColor = backgroundColor;
-  const [next, setNext] = useState(0);
-  let startSountrack=useAudio(audioSountrack, { trackTime: false });
-  useEffect(()=>{startSountrack.automatic();startSountrack.setLoop(true);},[])
-useEffect(() => {
-  if(!text&&next===1){
-    startSountrack.stop();
-  }
-}, [next])
+function Index({
+  imageMain,
+  text,
+  logo,
+  title,
+  ctaColor,
+  ctaText,
+  video,
+  mraid,
+  backgroundColor,
+  titleBook,
+}) {
+  // Fondo del body con cleanup
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = backgroundColor;
+    return () => (document.body.style.backgroundColor = prev);
+  }, [backgroundColor]);
 
-const configWall={
-  style:{backgroundColor:backgroundColor },  
-  portrait:{
-    x:50,
-    y:50,
-    width:100,
-    height:100,
-    anchor:"middle"
-  },
-  landscape:{
-    x:50,
-    y:50,
-    width:100,
-    height:100,
-    anchor:"middle"
-  }
-}
+  const [next, setNext] = useState(0);
+
+  const soundtrack = useAudio(audioSountrack, { trackTime: false });
+  useEffect(() => {
+    soundtrack.automatic();
+    soundtrack.setLoop(true);
+  }, [soundtrack]);
+
+  useEffect(() => {
+    if (!text && next === 1) soundtrack.stop();
+  }, [next, text, soundtrack]);
+
+  const configWall = {
+    style: { backgroundColor },
+    portrait: { x: 50, y: 50, width: 100, height: 100, anchor: "middle" },
+    landscape: { x: 50, y: 50, width: 100, height: 100, anchor: "middle" },
+  };
 
   return (
     <>
-    
-    <Card key={"wall"}  {...configWall}/>
-      <span key={"span1"}style={{ opacity: next === 0 ? 1 : 0,zIndex:next===0?1000:0}}>
+      <Card {...configWall} />
+
+      {/* Paso 1 */}
+      <span style={{ opacity: next === 0 ? 1 : 0, zIndex: next === 0 ? 1000 : 0 }}>
         <Block1
-        key={"block1"}
           setNext={setNext}
           imageMain={imageMain}
           logo={logo}
@@ -49,9 +57,10 @@ const configWall={
           backgroundColor={backgroundColor}
         />
       </span>
-      <span key={"span2"} style={{ opacity: next === 1 ? 1 : 0,zIndex:next===1?10:0}}>
+
+      {/* Paso 2 */}
+      <span style={{ opacity: next === 1 ? 1 : 0, zIndex: next === 1 ? 10 : 0 }}>
         <Block2
-        key={"block2"}
           setNext={setNext}
           ctaColor={ctaColor}
           ctaText={ctaText}
@@ -61,13 +70,12 @@ const configWall={
           mraid={mraid}
           backgroundColor={backgroundColor}
           title={titleBook}
-
         >
           {text}
         </Block2>
       </span>
     </>
   );
-};
+}
 
-export default Index;
+export default memo(Index);

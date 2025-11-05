@@ -6,7 +6,6 @@ import { useRedirectMIPEvent } from "../../../../../../src/hook/useRedirectMIP";
 import hexadecimalToRgba from "../../../../../../src/utils/hexadecimalToRgba";
 import AutoScrollBox from "../../../../../../src/component/AutoScrollBox";
 
-
 const Video = ({
   logo,
   title,
@@ -15,10 +14,11 @@ const Video = ({
   ctaColor,
   mraid,
   backgroundColor,
-  text
+  text,
 }) => {
+  // calcular una sola vez
+  const pendule = animatePendule();
 
-  
   const configPorte = {
     style: {
       backgroundSize: "cover",
@@ -27,54 +27,31 @@ const Video = ({
       borderRadius: "30px",
     },
     backgroundImage: image,
-    portrait: {
-      x: 50,
-      y: 27,
-      width: 90,
-      height: 20,
-      anchor: "middle",
-    },
-    landscape: {
-      x: 20,
-      y: 50,
-      width: 25,
-      height: 85,
-      anchor: "middle",
-    },
+    portrait: { x: 50, y: 27, width: 90, height: 20, anchor: "middle" },
+    landscape: { x: 20, y: 50, width: 25, height: 85, anchor: "middle" },
   };
+
   const configBackground = {
     style: {
       backgroundSize: "cover",
       backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",      
+      backgroundRepeat: "no-repeat",
       mixBlendMode: "saturation",
       backgroundImage: `linear-gradient(to top,
-    ${hexadecimalToRgba(backgroundColor, 1)} 10%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 20%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 30%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 40%,
-    ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
-    ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
-    ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
-    ${hexadecimalToRgba(backgroundColor, 7)} 100%
-    ), url(${image})`,
-
+        ${hexadecimalToRgba(backgroundColor, 1)}   10%,
+        ${hexadecimalToRgba(backgroundColor, 1)}   20%,
+        ${hexadecimalToRgba(backgroundColor, 1)}   30%,
+        ${hexadecimalToRgba(backgroundColor, 1)}   40%,
+        ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
+        ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
+        ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
+        ${hexadecimalToRgba(backgroundColor, 0.7)} 100%
+      ), url(${image})`,
     },
-    portrait: {
-      x: 50,
-      y: 50,
-      width: 200,
-      height: 200,
-      anchor: "middle",
-    },
-    landscape: {
-      x: 50,
-      y: 50,
-      width: 200,
-      height: 200,
-      anchor: "middle",
-    },
+    portrait: { x: 50, y: 50, width: 200, height: 200, anchor: "middle" },
+    landscape:{ x: 50, y: 50, width: 200, height: 200, anchor: "middle" },
   };
+
   const configCta = {
     onPressStart: () => useRedirectMIPEvent(mraid),
     style: {
@@ -82,84 +59,49 @@ const Video = ({
       fontWeight: "bold",
       color: "white",
       borderRadius: "20px",
-
     },
     portrait: {
-      x: 50,
-      y: 95.5,
-      width: 40,
-      height: 6,
-      anchor: "bottom",
-      fontSize: 4,
-      animate: animatePendule(),
+      x: 50, y: 95.5, width: 40, height: 6, anchor: "bottom", fontSize: 4,
+      animate: pendule,
     },
     landscape: {
-      fontSize: 3,
-      x: 70,
-      y: 87,
-      width: 26,
-      height: 11,
-      anchor: "middle",
-      animate: animatePendule(),
+      x: 70, y: 87, width: 26, height: 11, anchor: "middle", fontSize: 3,
+      animate: pendule,
     },
     loop: true,
     controlsAnimate: "play",
     children: cta,
   };
+
   const configLogo = {
     backgroundImage: logo,
-    style: {
-      backgroundSize: "95%",
-    },
-    portrait: {
-      x: 50,
-      y: 3,
-      width: 30,
-      height: 10,
-      anchor: "top",
-    },
-    landscape: {
-      x: 70,
-      y: 7.5,
-      width: 15,
-      height: 15,
-      anchor: "top",
-    },
+    style: { backgroundSize: "95%" },
+    portrait:  { x: 50, y: 3,   width: 30, height: 10, anchor: "top" },
+    landscape: { x: 70, y: 7.5, width: 15, height: 15, anchor: "top" },
   };
+
   const configTitle = {
     style: {
       color: "white",
       fontWeight: "bold",
       flexDirection: "column",
-     fontFamily:"novel", 
-
+      fontFamily: "novel",
     },
-    portrait: {
-      x: 50,
-      y: 62,
-      width: 90,
-      height: 45,
-      anchor: "middle",
-      fontSize: 4,
-    },
-    landscape: {
-      x: 70,
-      y: 52,
-      width: 40,
-      height: 55,
-      anchor: "middle",
-      fontSize: 2,
-    },
-    children: `‘‘${title}’’`,
+    portrait:  { x: 50, y: 62, width: 90, height: 45, anchor: "middle", fontSize: 4 },
+    landscape: { x: 70, y: 52, width: 40, height: 55, anchor: "middle", fontSize: 2 },
+    // (children eliminado aquí para no pisar el JSX interno)
   };
+
   return (
     <>
       <Card {...configBackground} />
       <Card {...configPorte} />
       <Card {...configLogo} />
-      <Card {...configTitle} >
-        <AutoScrollBox controlsMode="hidden" fitParent={true} height="100%" >
-        {text}
+      <Card {...configTitle}>
+        <AutoScrollBox controlsMode="hidden" fitParent height="100%">
+          {/* mostramos el título y luego el texto scrollable */}
+          <div style={{ marginBottom: "0.5em" }}>{`‘‘${title}’’`}</div>
+          {text}
         </AutoScrollBox>
       </Card>
       <Card {...configCta} />

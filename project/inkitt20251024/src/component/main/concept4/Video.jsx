@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useMemo, useRef, useCallback } from "react";
 
 import VideoToFramesPlayer from "../../../../../../src/component/VideoToFramesPlayer";
 import Card from "../../../../../../src/component/Card";
 import animatePendule from "../../../../../../src/utils/animate/animatePendule";
-import  { useRedirectMIPEvent } from "../../../../../../src/hook/useRedirectMIP";
+import { useRedirectMIPEvent } from "../../../../../../src/hook/useRedirectMIP";
 
 const Video = ({
-  finish=true,
+  finish = true,
   logo,
   video,
   cta,
@@ -14,9 +14,33 @@ const Video = ({
   mraid,
   backgroundColor,
 }) => {
+  // Mantengo tu side-effect
   document.body.style.backgroundColor = backgroundColor;
 
-  const {srcLandscape,srcPortrait,title}=video;
+  const { srcLandscape, srcPortrait, title } = video || {};
+
+  // 1) Animación estable
+  const pendule = useMemo(() => animatePendule(), []);
+
+  // 2) Gate anti-doble tap
+  const gateRef = useRef(false);
+  const handleCtaStart = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      if (gateRef.current) return;
+      gateRef.current = true;
+
+      useRedirectMIPEvent(mraid);
+
+      if (typeof queueMicrotask === "function") {
+        queueMicrotask(() => { gateRef.current = false; });
+      } else {
+        setTimeout(() => { gateRef.current = false; }, 0);
+      }
+    },
+    [mraid]
+  );
 
   const configVideo = {
     style: {
@@ -25,23 +49,12 @@ const Video = ({
       backgroundRepeat: "no-repeat",
       borderRadius: "30px",
     },
-    portrait: {
-      x: 50,
-      y: 45,
-      width: 55,
-      height: 55,
-      anchor: "middle",
-    },
-    landscape: {
-      x: 20,
-      y: 50,
-      width: 25,
-      height: 85,
-      anchor: "middle",
-    },
+    portrait: { x: 50, y: 45, width: 55, height: 55, anchor: "middle" },
+    landscape: { x: 20, y: 50, width: 25, height: 85, anchor: "middle" },
   };
+
   const configCta = {
-          onPressStart:()=> useRedirectMIPEvent(mraid),
+    onPressStart: handleCtaStart,
     style: {
       borderRadius: "20px",
       color: "white",
@@ -55,8 +68,7 @@ const Video = ({
       height: 6,
       anchor: "bottom",
       fontSize: 4,
-           animate:animatePendule(),
-     
+      animate: pendule,
       scale: 1,
     },
     landscape: {
@@ -66,59 +78,29 @@ const Video = ({
       height: 6,
       anchor: "bottom",
       fontSize: 4,
-      animate: animatePendule(),
-  
+      animate: pendule,
     },
     children: cta,
     loop: true,
     controlsAnimate: "play",
   };
+
   const configLogo = {
     backgroundImage: logo,
-    style: {
-      backgroundSize: "95%",
-    },
-    portrait: {
-      x: 50,
-      y: 4,
-      width: 30,
-      height: 10,
-      anchor: "top",
-    },
-    landscape: {
-      x: 70,
-      y: 16.2,
-      width: 20,
-      height: 20,
-      anchor: "middle",
-    },
+    style: { backgroundSize: "95%" },
+    portrait: { x: 50, y: 4, width: 30, height: 10, anchor: "top" },
+    landscape: { x: 70, y: 16.2, width: 20, height: 20, anchor: "middle" },
   };
+
   const configTitle = {
-    style: {
-      color: "white",
-      fontWeight: "bold",
-      flexDirection: "column",
-    },
-    portrait: {
-      x: 50,
-      y: 80,
-      width: 90,
-      height: 5,
-      anchor: "middle",
-      fontSize: 6,
-    },
-    landscape: {
-      x: 70,
-      y: 50,
-      width: 300,
-      height: 300,
-      anchor: "middle",
-      fontSize: 5.3,
-    },
+    style: { color: "white", fontWeight: "bold", flexDirection: "column" },
+    portrait: { x: 50, y: 80, width: 90, height: 5, anchor: "middle", fontSize: 6 },
+    landscape: { x: 70, y: 50, width: 300, height: 300, anchor: "middle", fontSize: 5.3 },
     children: `‘‘${title}’’`,
   };
 
   return (
+    // Mantengo tu comportamiento original: siempre "block"
     <span style={{ display: finish ? "block" : "block" }}>
       <VideoToFramesPlayer
         {...configVideo}

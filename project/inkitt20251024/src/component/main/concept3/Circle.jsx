@@ -4,7 +4,9 @@ import imageAccept from "../../../../assets/image/concept3/accept.webp";
 import imageDenied from "../../../../assets/image/concept3/denied.webp";
 import hexadecimalToRgba from "../../../../../../src/utils/hexadecimalToRgba";
 
-const Circle = ({  direction }) => {
+const Circle = ({ direction }) => {
+  const isRight = direction === "right";
+  const isLeft  = direction === "left";
 
   const configCircleAccept = {
     style: {
@@ -20,10 +22,10 @@ const Circle = ({  direction }) => {
       width: 19.5,
       height: 6.8,
       anchor: "middle",
-      scale: direction === "right" ? 1.2 : 1,
+      scale: isRight ? 1.2 : 1,
     },
     landscape: {
-      scale: direction === "right" ? 1.2 : 1,
+      scale: isRight ? 1.2 : 1,
       width: 8,
       height: 29,
       anchor: "middle",
@@ -32,6 +34,7 @@ const Circle = ({  direction }) => {
       y: 47,
     },
   };
+
   const configCircleDenied = {
     style: {
       background: `url(${imageDenied}) center/contain no-repeat`,
@@ -44,7 +47,7 @@ const Circle = ({  direction }) => {
       x: 37.8,
       y: 77.3,
       width: 9,
-      scale: direction === "left" ? 1.2 : 1,
+      scale: isLeft ? 1.2 : 1,
       height: 10.5,
       anchor: "middle",
     },
@@ -52,7 +55,7 @@ const Circle = ({  direction }) => {
       width: 6.5,
       height: 29,
       anchor: "middle",
-      scale: direction === "left" ? 1.2 : 1,
+      scale: isLeft ? 1.2 : 1,
       fontSize: 3.5,
       x: 15.5,
       y: 46,
@@ -88,7 +91,7 @@ const Circle = ({  direction }) => {
       y: 77,
       width: 19.5,
       height: 11.3,
-      scale: direction === "right" ? 1.2 : 1,
+      scale: isRight ? 1.2 : 1,
 
       anchor: "middle",
     },
@@ -97,11 +100,12 @@ const Circle = ({  direction }) => {
       height: 20.7,
       anchor: "middle",
       fontSize: 3.5,
-      scale: direction === "right" ? 1.2 : 1,
+      scale: isRight ? 1.2 : 1,
       x: 85,
       y: 46,
     },
   };
+
   const configCircleDenied2 = {
     style: {
       backgroundPosition: "center",
@@ -123,18 +127,19 @@ const Circle = ({  direction }) => {
       width: 19.5,
       height: 11.3,
       anchor: "middle",
-      scale: direction === "left" ? 1.2 : 1,
+      scale: isLeft ? 1.2 : 1,
     },
     landscape: {
       width: 11.7,
       height: 20.7,
       anchor: "middle",
-      scale: direction === "left" ? 1.2 : 1,
+      scale: isLeft ? 1.2 : 1,
       fontSize: 3.5,
       x: 15,
       y: 46,
     },
   };
+
   return (
     <>
       <Card key={"a2"} {...configCircleAccept2} />

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useRef, useCallback } from "react";
 
 import Card from "../../../../../../src/component/Card";
 import animatePendule from "../../../../../../src/utils/animate/animatePendule";
@@ -6,9 +6,8 @@ import { useRedirectMIPEvent } from "../../../../../../src/hook/useRedirectMIP";
 import hexadecimalToRgba from "../../../../../../src/utils/hexadecimalToRgba";
 import AutoScrollBox from "../../../../../../src/component/AutoScrollBox";
 
-
 const Text = ({
-  finish=true,
+  finish = true,
   logo,
   title,
   image,
@@ -16,8 +15,36 @@ const Text = ({
   ctaColor,
   mraid,
   backgroundColor,
-  text
+  text,
 }) => {
+  // 1) Animación estable (no recrea el array en cada render)
+  const pendule = useMemo(() => animatePendule(), []);
+
+  // 2) Handler con gate para evitar doble navegación/tap
+  const gateRef = useRef(false);
+  const handleCtaStart = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      if (gateRef.current) return;
+      gateRef.current = true;
+
+      useRedirectMIPEvent(mraid);
+
+      // liberar el gate en el siguiente micro-turno
+      if (typeof queueMicrotask === "function") {
+        queueMicrotask(() => {
+          gateRef.current = false;
+        });
+      } else {
+        setTimeout(() => {
+          gateRef.current = false;
+        }, 0);
+      }
+    },
+    [mraid]
+  );
+
   const configPorte = {
     style: {
       backgroundSize: "cover",
@@ -26,62 +53,38 @@ const Text = ({
       borderRadius: "20px",
     },
     backgroundImage: image,
-    portrait: {
-      x: 50,
-      y: 27,
-      width: 90,
-      height: 20,
-      anchor: "middle",
-    },
-    landscape: {
-      x: 27,
-      y: 50,
-      width: 31,
-      height: 85,
-      anchor: "middle",
-    },
+    portrait: { x: 50, y: 27, width: 90, height: 20, anchor: "middle" },
+    landscape: { x: 27, y: 50, width: 31, height: 85, anchor: "middle" },
   };
+
   const configBackground = {
     style: {
       backgroundSize: "cover",
       backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",      
+      backgroundRepeat: "no-repeat",
       mixBlendMode: "saturation",
       backgroundImage: `linear-gradient(to top,
-    ${hexadecimalToRgba(backgroundColor, 1)} 10%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 20%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 30%,
-    ${hexadecimalToRgba(backgroundColor, 1)} 40%,
-    ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
-    ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
-    ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
-    ${hexadecimalToRgba(backgroundColor, 7)} 100%
-    ), url(${image})`,
-
+        ${hexadecimalToRgba(backgroundColor, 1)} 10%,
+        ${hexadecimalToRgba(backgroundColor, 1)} 20%,
+        ${hexadecimalToRgba(backgroundColor, 1)} 30%,
+        ${hexadecimalToRgba(backgroundColor, 1)} 40%,
+        ${hexadecimalToRgba(backgroundColor, 0.9)} 50%,
+        ${hexadecimalToRgba(backgroundColor, 0.9)} 60%,
+        ${hexadecimalToRgba(backgroundColor, 0.8)} 90%,
+        ${hexadecimalToRgba(backgroundColor, 7)} 100%
+      ), url(${image})`,
     },
-    portrait: {
-      x: 50,
-      y: 50,
-      width: 200,
-      height: 200,
-      anchor: "middle",
-    },
-    landscape: {
-      x: 50,
-      y: 50,
-      width: 200,
-      height: 200,
-      anchor: "middle",
-    },
+    portrait: { x: 50, y: 50, width: 200, height: 200, anchor: "middle" },
+    landscape: { x: 50, y: 50, width: 200, height: 200, anchor: "middle" },
   };
+
   const configCta = {
-    onPressStart: () => useRedirectMIPEvent(mraid),
+    onPressStart: handleCtaStart,
     style: {
       backgroundColor: ctaColor,
       fontWeight: "bold",
       color: "white",
       borderRadius: "20px",
-
     },
     portrait: {
       x: 50,
@@ -90,7 +93,7 @@ const Text = ({
       height: 6,
       anchor: "bottom",
       fontSize: 4,
-      animate: animatePendule(),
+      animate: pendule,
     },
     landscape: {
       fontSize: 3,
@@ -99,55 +102,29 @@ const Text = ({
       width: 26,
       height: 11,
       anchor: "middle",
-      animate: animatePendule(),
+      animate: pendule,
     },
     loop: true,
     controlsAnimate: "play",
     children: cta,
   };
+
   const configLogo = {
     backgroundImage: logo,
-    style: {
-      backgroundSize: "95%",
-    },
-    portrait: {
-      x: 50,
-      y: 4,
-      width: 30,
-      height: 10,
-      anchor: "top",
-    },
-    landscape: {
-      x: 70,
-      y: 7.5,
-      width: 15,
-      height: 15,
-      anchor: "top",
-    },
+    style: { backgroundSize: "95%" },
+    portrait: { x: 50, y: 4, width: 30, height: 10, anchor: "top" },
+    landscape: { x: 70, y: 7.5, width: 15, height: 15, anchor: "top" },
   };
+
   const configTitle = {
     style: {
       color: "white",
       fontWeight: "bold",
       flexDirection: "column",
-      fontFamily:"novel", 
+      fontFamily: "novel",
     },
-    portrait: {
-      x: 50,
-      y: 62,
-      width: 90,
-      height: 45,
-      anchor: "middle",
-      fontSize: 4,
-    },
-    landscape: {
-      x: 70,
-      y: 52,
-      width: 35,
-      height: 55,
-      anchor: "middle",
-      fontSize: 2,
-    },
+    portrait: { x: 50, y: 62, width: 90, height: 45, anchor: "middle", fontSize: 4 },
+    landscape: { x: 70, y: 52, width: 35, height: 55, anchor: "middle", fontSize: 2 },
     children: `‘‘${title}’’`,
   };
 
@@ -156,9 +133,9 @@ const Text = ({
       <Card {...configBackground} />
       <Card {...configPorte} />
       <Card {...configLogo} />
-      <Card {...configTitle} >
+      <Card {...configTitle}>
         <AutoScrollBox fitParent={true} height="100%" controlsMode="hidden">
-        {text}
+          {text}
         </AutoScrollBox>
       </Card>
       <Card {...configCta} />

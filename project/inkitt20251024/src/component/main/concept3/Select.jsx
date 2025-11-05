@@ -4,11 +4,40 @@ import audioCard from "../../../../assets/audio/card.mp3";
 import audioSpin from "../../../../assets/audio/flipCard.mp3";
 import useAudio from "../../../../../../src/hook/useAudio";
 
-// Z-index base
+// =========================
+// Constantes (fuera del comp)
+// =========================
 const Z_BASE_CARD = 10;            // Cards: 10 + index
 const Z_BASE_TITLE = -10;          // Titles: base negativo (invertido con length)
 const Z_SELECTED_CARD  = 2_000_000;
 const Z_SELECTED_TITLE = Z_BASE_CARD - 1; // 9 -> debajo de cualquier card
+
+const animateLeftConst = [
+  [{ rotate: -45, x: -20, y: -3,  scale: +0.05, scaleX: +0.04, scaleY: +0.54 }, 220],
+  [{ rotate: -45, x: -20, y: -5,  scale: -0.02,                  scaleY:  0.52 }, 200],
+  [{ rotate: -45, x: -15, y: -7,  scale: -0.03, blur: +2 },                       260],
+  [{ rotate: -45, x: -25, y: -9,  scale: -0.04, opacity: -0.5, blur: +2 },        360],
+  [{ rotate: -180, x: -100, y: -2, opacity: -0.5 }, 160],
+];
+
+const animateRightConst = [
+  [{ rotate: +45, x: +20, y:  -3, scale: +0.05, scaleX: +0.04, scaleY: +0.54 }, 220],
+  [{ rotate: +45, x: +20, y:  -5, scale: -0.02,                  scaleY:  0.52 }, 200],
+  [{ rotate: +45, x: +15, y:  -7, scale: -0.03, blur: +2                          }, 260],
+  [{ rotate: +45, x: +25, y:  -9, scale: -0.04, opacity: -0.5, blur: +2          }, 300],
+  [{ rotate:+180, x:+100, y:  -2, opacity: -0.5                                   }, 260],
+];
+
+const animateCenterConst = [
+  [{ rotateY: +90,  scaleX: -0.08, scaleY: +0.08, scale: +1.04, blur:  2 }, 250],
+  [{ rotateY: +180, scaleX: +0.08, scaleY: -0.08, scale:  1.06, blur:  4 }, 250],
+  [{ rotateY: +360, scaleX: -0.02, scaleY: +0.02, scale: +1.02, blur:  8 }, 250],
+  [{ rotateY:   0,  scaleX:  0.00, scaleY:  0.00, scale:  1.00, blur:  0 }, 250],
+];
+
+const baseAnimateTitleConst = [[{ opacity: -1, blur: 10 }, 200]];
+
+// =========================
 
 const Select = ({
   image,
@@ -31,7 +60,7 @@ const Select = ({
   const [rot, setRot] = React.useState(baseRotate);
   React.useEffect(() => setRot(baseRotate), [baseRotate]);
 
-  // ===== CARD (SIN CAMBIOS) =====
+  // ===== CARD =====
   const [controller, setController] = React.useState("stop");
   const [animateSelect, setAnimateSelect] = React.useState([]); // vacío durante drag
   const [select, setSelect] = React.useState(false);
@@ -42,27 +71,6 @@ const Select = ({
 
   const nextAfterAnimRef = React.useRef(null);
   const hideOnFinishRef = React.useRef(false);
-
-  const animateLeft = [
-    [{ rotate: -45, x: -20, y: -3,  scale: +0.05, scaleX: +0.04, scaleY: +0.54 }, 220],
-    [{ rotate: -45, x: -20, y: -5,  scale: -0.02,                  scaleY:  0.52 }, 200],
-    [{ rotate: -45, x: -15, y: -7,  scale: -0.03, blur: +2 },                       260],
-    [{ rotate: -45, x: -25, y: -9,  scale: -0.04, opacity: -0.5, blur: +2 },        360],
-    [{ rotate: -180, x: -100, y: -2, opacity: -0.5 }, 160],
-  ];
-  const animateRight = [
-    [{ rotate: +45, x: +20, y:  -3, scale: +0.05, scaleX: +0.04, scaleY: +0.54 }, 220],
-    [{ rotate: +45, x: +20, y:  -5, scale: -0.02,                  scaleY:  0.52 }, 200],
-    [{ rotate: +45, x: +15, y:  -7, scale: -0.03, blur: +2                          }, 260],
-    [{ rotate: +45, x: +25, y:  -9, scale: -0.04, opacity: -0.5, blur: +2          }, 300],
-    [{ rotate:+180, x:+100, y:  -2, opacity: -0.5                                   }, 260],
-  ];
-  const animateCenter = [
-    [{ rotateY: +90,  scaleX: -0.08, scaleY: +0.08, scale: +1.04, blur:  2 }, 250],
-    [{ rotateY: +180, scaleX: +0.08, scaleY: -0.08, scale:  1.06, blur:  4 }, 250],
-    [{ rotateY: +360, scaleX: -0.02, scaleY: +0.02, scale: +1.02, blur:  8 }, 250],
-    [{ rotateY:   0,  scaleX:  0.00, scaleY:  0.00, scale:  1.00, blur:  0 }, 250],
-  ];
 
   const configGlobal = {
     style: {
@@ -117,11 +125,9 @@ const Select = ({
   };
 
   // ===== TITLE (motor igual que card, pero desmontable) =====
-  const baseAnimateTitle = [[{ opacity: -1, blur: 10 }, 200]];
   const [titleAnimate, setTitleAnimate] = React.useState([]);
   const [titleController, setTitleController] = React.useState("stop");
   const [titleHidden, setTitleHidden] = React.useState(false);
-  // Flag permanente: una vez fadeado, no se vuelve a renderizar
   const hasTitleFadedRef = React.useRef(false);
 
   // z-index del título (serie negativa invertida con length)
@@ -138,9 +144,8 @@ const Select = ({
       fontWeight: "bold",
     },
     portrait: {
-      fontSize:8,x: 50, y: 7, width: 100, height: 10, anchor: "middle",
+      fontSize: 8, x: 50, y: 7, width: 100, height: 10, anchor: "middle",
       animate: titleHidden ? [] : titleAnimate,
-      
     },
     landscape: {
       x: 50, y: 6, width: 100, height: 10, anchor: "middle", fontSize: 3.5,
@@ -148,10 +153,9 @@ const Select = ({
     },
     children: title,
     loop: false,
-    controlsAnimate: titleHidden ? "stop" : titleController, // controller propio
+    controlsAnimate: titleHidden ? "stop" : titleController,
     hidden: titleHidden,
     setSecuenceFinish: () => {
-      // Oculta y marca "para siempre", luego desmontamos con el render condicional
       requestAnimationFrame(() => {
         setTitleHidden(true);
         hasTitleFadedRef.current = true;
@@ -178,7 +182,6 @@ const Select = ({
       setControlCard(true);
       setIsAnimating(false);
       setIsHidden(false);
-      // ¡No reactivar título si ya fadeó!
       setRot(0);
       return;
     }
@@ -195,43 +198,42 @@ const Select = ({
       setControlCard(false);
       setIsAnimating(true);
 
-      // CARD (igual que siempre)
       if (x < 1 && x > -1) {
         setRot(baseRotate);
         startSpin.play();
-        setAnimateSelect(animateCenter);
+        setAnimateSelect(animateCenterConst);
         setAcceptDenied?.("accept");
         nextAfterAnimRef.current = () => setNext?.(1);
       } else if (horizontal === "right") {
         setRot(baseRotate);
         startCard.play();
-        setAnimateSelect(animateRight);
+        setAnimateSelect(animateRightConst);
         setAcceptDenied?.("accept");
         nextAfterAnimRef.current = () => setNext?.(1);
       } else {
         setRot(0);
         startCard.play();
-        setAnimateSelect(animateLeft);
+        setAnimateSelect(animateLeftConst);
         setAcceptDenied?.("deny");
         nextAfterAnimRef.current = () => setContNext?.((e) => e + 1);
-        hideOnFinishRef.current = true;  // ocultar card al terminar
+        hideOnFinishRef.current = true; // ocultar card al terminar
       }
 
       // TITLE: solo si nunca ha fadeado (evita reapariciones)
       if (!hasTitleFadedRef.current) {
-        setTitleAnimate(baseAnimateTitle.map(([d, t]) => [{ ...d }, t])); // ref nueva
+        // clonar base para nueva referencia
+        setTitleAnimate(baseAnimateTitleConst.map(([d, t]) => [{ ...d }, t]));
         setTitleController("stop");
         requestAnimationFrame(() => setTitleController("play"));
       }
 
-      // CARD play (como siempre)
       requestAnimationFrame(() => setController("play"));
     }
   };
 
   return (
     <>
-      {!hasTitleFadedRef.current && <Card {...configTitle} />}  {/* ⬅️ DESMONTA para siempre */}
+      {!hasTitleFadedRef.current && <Card {...configTitle} />}
       <Card
         {...configCard}
         draggable
